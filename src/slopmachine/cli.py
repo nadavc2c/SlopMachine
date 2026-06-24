@@ -326,11 +326,31 @@ def models_download(
     typer.echo(f"Cached at: {path}")
 
 
+@assets_app.command("list")
+def assets_list(as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON output.")):
+    """List supporting assets: pose models + the curated dance-clip catalog."""
+    from .registry import registry
+
+    reg = registry()
+    pose_models = list(reg.capabilities["pose"].models) if "pose" in reg.capabilities else []
+    dances = config.load_assets().get("dances", {}) or {}
+    if as_json:
+        typer.echo(json.dumps({"pose": pose_models, "dances": dances}, indent=2))
+        return
+    typer.echo(f"pose models: {', '.join(pose_models) or '(none)'}")
+    if dances:
+        for cid, d in dances.items():
+            typer.echo(f"dance/{cid}: {d.get('style', '?')} ~{d.get('duration_s', '?')}s [{d.get('license', '?')}]")
+    else:
+        typer.echo("dance clips: none shipped yet (CC0 first-party catalog is a build step; see config/assets.yaml).")
+
+
 @assets_app.command("download")
 def assets_download(
-    kind: str = typer.Argument(..., help="Asset kind to fetch. Known: 'pose'."),
+    kind: str = typer.Argument(..., help="Asset kind: 'pose' or 'dance'."),
+    name: Optional[str] = typer.Argument(None, help="For 'dance': the clip id (see `slop assets list`)."),
 ):
-    """Pre-fetch supporting assets into the repo-local cache."""
+    """Pre-fetch supporting assets into the local cache."""
     if kind == "pose":
         from .pipeline.pose import ensure_pose_assets
         from .registry import get_model
@@ -339,8 +359,24 @@ def assets_download(
         typer.echo(f"Downloading pose models ({key}) from {spec.repo_id}/{spec.subfolder} ...")
         path = _safe(ensure_pose_assets, spec)
         typer.echo(f"Cached at: {path}")
+    elif kind == "dance":
+        dances = config.load_assets().get("dances", {}) or {}
+        if not name:
+            typer.secho("Usage: slop assets download dance <id>  (see `slop assets list`).", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1)
+        entry = dances.get(name)
+        if not entry:
+            avail = ", ".join(dances) or "(none shipped yet)"
+            typer.secho(f"Unknown dance clip '{name}'. Available: {avail}", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1)
+        from huggingface_hub import hf_hub_download
+
+        config.configure_hf_cache()
+        typer.echo(f"Downloading dance clip '{name}' [{entry.get('license', '?')}] ...")
+        path = hf_hub_download(repo_id=entry["repo_id"], filename=entry["filename"], repo_type="dataset")
+        typer.echo(f"Cached at: {path}")
     else:
-        typer.secho(f"Unknown asset kind: '{kind}' (known: pose)", fg=typer.colors.RED, err=True)
+        typer.secho(f"Unknown asset kind: '{kind}' (known: pose, dance)", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
 
 

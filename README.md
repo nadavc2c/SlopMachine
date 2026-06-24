@@ -2,10 +2,11 @@
 
 **`slop` — the Swiss-army-knife of generative content, built from the ground up to be driven by AI agents.**
 
-A modular, CLI-driven toolkit for running the best open generative-AI models **locally** on an NVIDIA
-Blackwell GPU (built/tested on an RTX 5080, 16 GB). One `slop` CLI, many capabilities — text→image
-(with styles + identity) and the flagship **AI dance** (animate a person from a photo + a driving
-video). Backed by HuggingFace `diffusers` — **no ComfyUI**.
+A modular, CLI-driven toolkit for running the best open generative-AI models **locally** — NVIDIA
+first-class (built/tested on an RTX 5080, 16 GB), but also Apple-MPS / CPU, or with **no GPU at all**
+via token-based remote providers. One `slop` CLI, many capabilities — text→image (with styles +
+identity) and the flagship **AI dance** (animate a person from a photo + a driving video). Backed by
+HuggingFace `diffusers` — **no ComfyUI**.
 
 Design goals: a CLI an **agent** can drive (discoverable `--help`, `--json` output, clean errors,
 no prompts), always-current models (a registry you refresh, not ids hardcoded in code), and modular
@@ -55,6 +56,25 @@ the open analog of Viggle / Kling / ElevenLabs AI-dance. Two stages: pose-skelet
 16 GB via the official group-offloading recipe (verified ~12.5 GB peak); it streams the model from
 CPU, so expect **minutes per clip**. On out-of-memory, lower `--fps`/`--steps` or shorten the clip.
 
+## Backends: local-first, optional remote (no surprise spend)
+
+`slop` is NVIDIA-first but portable. The default backend is **`local` (free)** and auto-detects the
+device: **CUDA → Apple-MPS → CPU** (heavy dance/video want a real GPU; small image models run on CPU).
+
+For GPU-less use, opt into **token-based remote providers** — HuggingFace Inference or Google
+(`google-genai`, current Gemini image model, *not* the deprecated Imagen). They are **OFF by default**
+and cannot spend money unless you explicitly opt in:
+
+```bash
+export SLOP_ALLOW_CLOUD=1            # a standing, human-set allowance (PowerShell: $env:SLOP_ALLOW_CLOUD="1")
+export HF_TOKEN=hf_...               # or GEMINI_API_KEY for Google
+uv run slop image "a neon cat" --provider hf-inference -m hf-flux -o outputs/cat.png
+```
+
+Without the gate (or a token) any remote provider is **refused** with a clear message — one choke point
+(`config.resolve_provider`) guarantees no path spends by accident. `slop info` shows the gate state and
+which tokens are present; the `cloud` extra adds Google's SDK (`uv sync --extra cloud`).
+
 ## Use it as an Agent Skill / Claude plugin
 
 `.claude/skills/slop/` is a thin Agent Skill — the agent-facing manual (command map + examples +
@@ -91,13 +111,13 @@ The skill ships **no weights** — they download on demand. (Refresh models with
 
 ## Models are not hardcoded
 
-`config/models.yaml` is the single source of truth for which model backs each capability. Swap a
+`src/slopmachine/config/models.yaml` is the single source of truth for which model backs each capability. Swap a
 model by editing one row — no code changes. Run the **`slop-models`** skill to research and refresh
 the registry to the current-best models. Seeded entries are a runnable starting point; models come and go.
 
 ## Styles
 
-Prompt presets live in `config/styles/*.yaml` (anime, cyberpunk, casino "3D glossy slot-art").
+Prompt presets live in `src/slopmachine/config/styles/*.yaml` (anime, cyberpunk, casino "3D glossy slot-art").
 Add your own by dropping in a new YAML file.
 
 ## Containment
@@ -110,7 +130,10 @@ opt-in extra (`uv sync --extra dance`), keeping the core lean.
 
 - **Foundation + image** (done): `slop image` with styles + identity.
 - **AI dance** (done): `slop dance` — pose-skeleton extraction → Wan2.2-Animate motion transfer, on 16 GB.
-- **Next:** text/image → video; faster dance (distilled few-step); a curated CC0 driving-clip catalog;
-  then CLI-fied versions of the most common ComfyUI workflows (upscale, inpaint, controlnet, …); music.
+- **Portable backends** (done): local CUDA/MPS/CPU + opt-in token-based remote providers (HF, Google).
+- **★ North star:** a fully autonomous, Claude-driven **TikTok slop machine** — brief → visuals → music
+  → captions → ffmpeg assembly (9:16, burned-in captions) → post-ready clip.
+- **Next:** text/image → video; music (ACE-Step / Stable Audio); faster dance (distilled few-step); a
+  curated CC0 driving-clip catalog; CLI-fied common ComfyUI workflows (upscale, inpaint, controlnet, …).
 
 See `CLAUDE.md` for architecture and contributor conventions.

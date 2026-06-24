@@ -24,7 +24,7 @@ operationalize these.
    repo-local `models/` cache (via `HF_HOME`). **Never install system-wide packages or drivers
    without asking first.**
 4. **No ComfyUI.** `diffusers` is the backbone.
-5. **Model-agnostic.** Never hardcode model ids in code. `config/models.yaml` is the single source
+5. **Model-agnostic.** Never hardcode model ids in code. `src/slopmachine/config/models.yaml` is the single source
    of truth; refresh to current-best via the `/slop-models` skill. Models come and go — keep it fresh.
 6. **Personal/experimental use** → choose the highest-quality model regardless of license (note
    restrictions in the registry; don't avoid models over them).
@@ -63,7 +63,7 @@ uv run --extra dance slop dance --reference me.jpg --driving dance.mp4 -o output
 
 - `cli.py` — Typer CLI (thin; heavy imports deferred into commands).
 - `config.py` — pydantic schemas + loaders; repo-local `outputs/`, `models/`, HF-cache containment.
-- `registry.py` — capability → `ModelSpec` (reads `config/models.yaml`). The only model-lookup path.
+- `registry.py` — capability → `ModelSpec` (reads `src/slopmachine/config/models.yaml`). The only model-lookup path.
 - `hardware.py` — VRAM detection + `LoadPlan` (dtype / offload / fp8 / VAE-tiling). **All VRAM-fitting
   logic lives here**; stages ask it for a plan.
 - `pipeline/base.py` — `Stage` interface (`run(**inputs) -> dict`). The modular unit.
@@ -75,7 +75,7 @@ uv run --extra dance slop dance --reference me.jpg --driving dance.mp4 -o output
   diffusers group-offloading recipe (bf16, NO fp8, NO `pipe.to(cuda)`).
 - `vendor/wan_animate_preprocess/` — vendored official Wan-Animate preprocessing (Apache-2.0; see NOTICE).
 - `runner.py` — chains stages (output of one → input of next).
-- `config/models.yaml` — the registry. `config/styles/*.yaml` — prompt presets (anime/cyberpunk/casino).
+- `src/slopmachine/config/models.yaml` — the registry. `src/slopmachine/config/styles/*.yaml` — prompt presets (anime/cyberpunk/casino).
 
 ## Dependency policy — lean core, opt-in extras
 
@@ -98,7 +98,7 @@ uv run --extra dance slop dance --reference me.jpg --driving dance.mp4 -o output
 ## Adding a new capability (the modular path)
 
 1. Add a `Stage` subclass in `pipeline/` implementing `run()`.
-2. Add the capability + model row(s) to `config/models.yaml`.
+2. Add the capability + model row(s) to `src/slopmachine/config/models.yaml`.
 3. Add a `slop <cap>` command in `cli.py` that resolves the model and calls the stage.
    (e.g. future SVG: `TraceStage` + `pipeline/trace.py` + `slop trace`.)
 

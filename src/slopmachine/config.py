@@ -1,8 +1,8 @@
 """Config schemas and loaders for SlopMachine.
 
-The model *registry* (``config/models.yaml``) is the single source of truth for
+The model *registry* (``src/slopmachine/config/models.yaml``) is the single source of truth for
 which model backs each capability. Code never hardcodes model ids — it asks the
-registry. Style presets live in ``config/styles/*.yaml``.
+registry. Style presets live in ``src/slopmachine/config/styles/*.yaml``.
 """
 
 from __future__ import annotations
@@ -19,35 +19,41 @@ class SlopError(Exception):
     """A user-facing error (bad model/capability/style). The CLI prints it cleanly."""
 
 
-def _project_root() -> Path:
-    # src/slopmachine/config.py -> parents[2] == repo root
-    return Path(__file__).resolve().parents[2]
+def _package_dir() -> Path:
+    """The installed slopmachine package dir — resolves whether editable or wheel-installed,
+    so the bundled config/ (registry + styles) is found without needing the source repo."""
+    import importlib.resources
+
+    return Path(str(importlib.resources.files("slopmachine")))
 
 
 def config_dir() -> Path:
+    """Read-only registry + style presets, shipped as package data. Override with SLOP_CONFIG_DIR."""
     env = os.environ.get("SLOP_CONFIG_DIR")
-    return Path(env) if env else _project_root() / "config"
+    return Path(env) if env else _package_dir() / "config"
 
 
 def outputs_dir() -> Path:
+    """Where generated artifacts land. Defaults to ./outputs in the working dir; SLOP_OUTPUTS_DIR overrides."""
     env = os.environ.get("SLOP_OUTPUTS_DIR")
-    d = Path(env) if env else _project_root() / "outputs"
+    d = Path(env) if env else Path.cwd() / "outputs"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
 def models_cache_dir() -> Path:
+    """Local model cache (./models in the working dir). Override SLOP_MODELS_DIR, or set HF_HOME directly."""
     env = os.environ.get("SLOP_MODELS_DIR")
-    d = Path(env) if env else _project_root() / "models"
+    d = Path(env) if env else Path.cwd() / "models"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
 def configure_hf_cache() -> Path:
-    """Keep downloaded weights inside the repo (containment) unless HF_HOME is set.
+    """Keep downloaded weights in the local models/ dir (working dir or SLOP_MODELS_DIR) unless HF_HOME is set.
 
-    Must run before huggingface_hub / diffusers are imported. Respects a user-set
-    HF_HOME so the shared cache can still be opted into.
+    Must run before huggingface_hub / diffusers are imported. Respects a user-set HF_HOME so the
+    shared cache can still be opted into.
     """
     if "HF_HOME" not in os.environ:
         os.environ["HF_HOME"] = str(models_cache_dir())
@@ -178,3 +184,11 @@ def load_style(name: str) -> StylePreset:
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     data.setdefault("name", name)
     return StylePreset(**data)
+
+
+def load_assets() -> dict:
+    """The on-demand asset catalog (dance clips, etc.) from config/assets.yaml. Empty dict if absent."""
+    path = config_dir() / "assets.yaml"
+    if not path.exists():
+        return {}
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}

@@ -109,3 +109,34 @@ def test_device_mps_when_no_cuda(monkeypatch):
 def test_device_cpu_fallback(monkeypatch):
     monkeypatch.setattr(hardware, "_torch", lambda: _fake_torch(cuda=False, mps=False))
     assert hardware.device() == "cpu"
+
+
+# --- remote backend dispatch (mocked SDK; no network) ----------------------------------
+
+def test_backend_dispatch_hf_inference(monkeypatch):
+    import huggingface_hub
+
+    import slopmachine.pipeline.backends as backends
+
+    seen = {}
+
+    class _FakeClient:
+        def __init__(self, api_key=None):
+            seen["api_key"] = api_key
+
+        def text_to_image(self, prompt, model=None, negative_prompt=None):
+            seen.update(prompt=prompt, model=model)
+            return "FAKE_IMAGE"
+
+    monkeypatch.setattr(huggingface_hub, "InferenceClient", _FakeClient)
+    monkeypatch.setenv("HF_TOKEN", "tok")
+    out = backends.generate_image("hf-inference", SimpleNamespace(repo_id="some/model"), "a cat")
+    assert out == "FAKE_IMAGE"
+    assert seen["model"] == "some/model" and seen["api_key"] == "tok" and seen["prompt"] == "a cat"
+
+
+def test_backend_unknown_provider_errors():
+    import slopmachine.pipeline.backends as backends
+
+    with pytest.raises(config.SlopError):
+        backends.generate_image("nope", SimpleNamespace(repo_id="x"), "p")

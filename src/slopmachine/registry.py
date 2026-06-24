@@ -1,4 +1,4 @@
-"""Thin accessors over the model registry (config/models.yaml).
+"""Thin accessors over the model registry (src/slopmachine/config/models.yaml).
 
 Capability -> resolved ModelSpec. This is the only place the rest of the code
 goes to find out *which* model to use, so swapping models never touches code.

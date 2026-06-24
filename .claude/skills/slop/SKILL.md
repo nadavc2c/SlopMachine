@@ -24,7 +24,7 @@ metadata:
 # slop — generative content, by CLI
 
 `slop` is a thin, model-agnostic CLI over HuggingFace `diffusers`. Each capability is a subcommand;
-the registry (`config/models.yaml`) decides which model backs each one, so commands never change when
+the registry (`src/slopmachine/config/models.yaml`) decides which model backs each one, so commands never change when
 models do. **You operate `slop`; you don't reimplement it.** Run commands with `uv run slop ...` so
 everything stays inside the project's `uv`-managed `.venv` (never global Python).
 
@@ -91,6 +91,6 @@ flags and examples before composing a call. `--json` (where shown) gives machine
 
 ## Extending
 
-New capability = a `Stage` in `src/slopmachine/pipeline/` + a row in `config/models.yaml` + a
+New capability = a `Stage` in `src/slopmachine/pipeline/` + a row in `src/slopmachine/config/models.yaml` + a
 `slop <verb>` command (see CLAUDE.md "Adding a new capability"). To refresh a model to the current
 best, use the `slop-models` skill.

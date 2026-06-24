@@ -1,6 +1,6 @@
 # slop models / assets — the model registry
 
-`config/models.yaml` is the single source of truth: each capability maps to a model. Code never
+`src/slopmachine/config/models.yaml` is the single source of truth: each capability maps to a model. Code never
 hardcodes model ids — it asks the registry — so swapping a model is a one-line registry edit.
 
 ```

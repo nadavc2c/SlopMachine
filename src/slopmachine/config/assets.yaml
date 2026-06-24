@@ -1,0 +1,23 @@
+# Curated, ready-to-use driving DANCE clips ("preloaded dances", like Viggle/Kling) fetched on demand
+# by `slop assets download dance <id>`. LICENSE is load-bearing here: these ship in a distributable
+# skill, so default ONLY to CC0 / first-party / clearly-permissive sources with known provenance, and
+# to simple single-person full-body motion that the pose extractor handles reliably.
+#
+# Sourcing policy (from the dance-clip research): prefer a self-hosted first-party CC0 set rendered
+# from CMU public-domain motion capture (e.g. a `slopmachine/dance-clips` HF dataset). Do NOT ship
+# scraped social clips, AIST++ (academic-only), or stock-site clips (standalone redistribution barred).
+# yt-dlp is for the user's OWN clips only — never an auto-default.
+#
+# Schema per entry:
+#   <id>:
+#     repo_id: <hf-dataset-id>     # fetched via hf_hub_download(repo_type="dataset")
+#     filename: <clip>.mp4
+#     kind: driving_video
+#     duration_s: <float>
+#     fps: <int>
+#     style: <e.g. hiphop | waltz | idle-sway>
+#     license: CC0-1.0
+#     credit: <attribution>
+#     source_url: <provenance>
+
+dances: {}   # none shipped yet — the first-party CC0 catalog is a build step (render + host, then add rows here)
