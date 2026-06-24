@@ -1,0 +1,5 @@
+name: casino
+positive: "{prompt}, glossy 3D cartoon render, slot-machine game art, mobile game splash art, vibrant saturated colors, golden coins and sparkles, playful stylized character, polished subsurface shaders, soft studio lighting, highly detailed, rendered in octane"
+negative: "lowres, flat 2d, photorealistic, dull muted colors, bad anatomy, extra fingers, text, watermark, jpeg artifacts, blurry, ugly"
+gen_defaults:
+  guidance_scale: 7.5

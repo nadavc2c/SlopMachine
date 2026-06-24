@@ -1,0 +1,94 @@
+# SlopMachine model registry — the SINGLE source of truth for which model backs each capability.
+# Code never hardcodes model ids; it asks the registry. Swapping a model = editing a row here, no code change.
+#
+# These are SEED entries to make the scaffold runnable. Resolve to the current-best models via the
+# /slop-models skill (which reads official docs / HF first). Models come and go — keep this fresh.
+
+capabilities:
+  image:
+    default: sdxl
+    models:
+      sdxl:
+        repo_id: stabilityai/stable-diffusion-xl-base-1.0
+        precision: fp16
+        variant: fp16
+        min_vram_gb: 8
+        license: OpenRAIL++-M
+        tier: fast
+        gen_defaults:
+          num_inference_steps: 30
+          guidance_scale: 7.0
+          width: 1024
+          height: 1024
+        notes: Verified scaffold default; comfortable on 16GB, huge LoRA ecosystem.
+      flux-dev:
+        repo_id: black-forest-labs/FLUX.1-dev
+        precision: bf16
+        min_vram_gb: 16
+        license: FLUX.1-dev Non-Commercial (free local use)
+        tier: quality
+        gen_defaults:
+          num_inference_steps: 28
+          guidance_scale: 3.5
+          width: 1024
+          height: 1024
+        notes: >-
+          Candidate quality tier (12B DiT). Gated repo (run `hf auth login`). On 16GB, hardware.py
+          applies fp8 layerwise casting + model CPU offload. Confirm best option via /slop-models.
+
+  identity:
+    default: ip-adapter-sdxl
+    models:
+      ip-adapter-sdxl:
+        repo_id: h94/IP-Adapter
+        subfolder: sdxl_models
+        weight_name: ip-adapter_sdxl.safetensors
+        base_capability: image
+        min_vram_gb: 1
+        license: Apache-2.0
+        notes: Identity-preservation adapter loaded onto the image pipeline; pairs with the SDXL image model.
+
+  # AI-dance flagship: pose-skeleton extraction -> motion transfer (reference person + driving
+  # dance video -> that person performing the dance). Open analog of Viggle / Kling / ElevenLabs.
+  animation:
+    default: wan-animate
+    models:
+      wan-animate:
+        repo_id: Wan-AI/Wan2.2-Animate-14B-Diffusers
+        precision: bf16
+        min_vram_gb: 16
+        license: Apache-2.0
+        tier: quality
+        pipeline: WanAnimatePipeline
+        gen_defaults:
+          mode: animate              # "animate" = drive a character; "replace" (M3) swaps into a scene
+          segment_frame_length: 21   # SMALL segments keep peak activation within 16GB for ANY clip length
+          guidance_scale: 1.0        # Wan-Animate disables CFG by default; raise to use negative_prompt
+          num_inference_steps: 12    # quality/speed balance; group-offload streaming is ~20s/step on 16GB
+          fps: 16
+          max_area: 147456           # ~288x512; MEASURED ~12.5GB peak on the RTX 5080 (bf16 group offload)
+        notes: >-
+          Diffusers-native WanAnimatePipeline (merged diffusers PR #12526; shipped v0.36-0.38),
+          Apache-2.0, ungated. ~76.6GB bf16 repo. 16GB fit = OFFICIAL diffusers group-offloading recipe
+          (AnimateStage): transformer leaf_level + use_stream + low_cpu_mem_usage, text_encoder
+          block_level, VAE upcast to fp32 and resident; NO pipe.to(cuda); NO fp8 layerwise casting
+          (fp8 matmul fails on Blackwell sm_120 + torch cu128). VERIFIED ~12.5GB peak on the RTX 5080.
+          REQUIRES the 'pose' assets to turn the raw driving video into pose+face videos first
+          (preprocessing is not in diffusers yet -> done by PoseStage). Quantized/GGUF loading is
+          currently broken in diffusers for Wan (issue #12009) -> re-check for a faster path later.
+
+  # Driving-signal extractor for Wan-Animate (its preprocessing is not in diffusers). Tiny ONNX
+  # models run on CPU onnxruntime (no Blackwell sm_120 dependency). Only the subfolder is fetched.
+  pose:
+    default: wan-vitpose
+    models:
+      wan-vitpose:
+        repo_id: Wan-AI/Wan2.2-Animate-14B
+        subfolder: process_checkpoint
+        base_capability: animation
+        min_vram_gb: 1
+        license: Apache-2.0
+        notes: >-
+          YOLOv10 person detect (det/yolov10m.onnx) + ViTPose whole-body (pose2d/vitpose_h_wholebody.onnx)
+          -> src_pose.mp4 (skeleton) + src_face.mp4. Fetched via `slop assets download pose` (downloads
+          only the process_checkpoint/ subfolder, ~hundreds of MB). SAM2 (replace mode) added in M3.

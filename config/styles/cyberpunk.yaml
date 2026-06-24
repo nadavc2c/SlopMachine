@@ -1,0 +1,5 @@
+name: cyberpunk
+positive: "{prompt}, cyberpunk aesthetic, neon-lit rain-slick night city, holographic signage, glowing accents, cinematic volumetric lighting, moody atmosphere, highly detailed, 8k"
+negative: "lowres, worst quality, daylight, rural, dull washed-out colors, bad anatomy, text, watermark, jpeg artifacts, blurry"
+gen_defaults:
+  guidance_scale: 6.5

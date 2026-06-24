@@ -1,0 +1,25 @@
+Wan2.2-Animate preprocessing — vendored subset
+================================================
+
+Source:   https://github.com/Wan-Video/Wan2.2
+Path:     wan/modules/animate/preprocess/
+Authors:  The Alibaba Wan Team
+License:  Apache License 2.0 (https://github.com/Wan-Video/Wan2.2/blob/main/LICENSE.txt)
+
+Files vendored (with one modification, see below):
+  - pose2d.py              YOLO + ViTPose ONNX inference wrappers (onnxruntime)
+  - pose2d_utils.py        keypoint / heatmap utilities, AAPoseMeta
+  - utils.py               resize / frame-indexing / face-bbox helpers
+  - human_visualization.py whole-body pose skeleton rendering
+
+Modification (the ONLY change to the file contents):
+  - Intra-package imports were made relative so the files form an importable Python package,
+    e.g. `from pose2d_utils import ...` -> `from .pose2d_utils import ...`. No logic changed.
+
+NOT vendored (upstream files relying on heavier/optional deps; unneeded for animate mode):
+  - process_pipepline.py, preprocess_data.py  (orchestration; reimplemented in
+    slopmachine/pipeline/pose.py using cv2 + imageio instead of decord + moviepy)
+  - sam_utils.py, video_predictor.py          (SAM2; "replace" mode only — future)
+  - retarget_pose.py                          (pose retargeting; optional — future)
+
+To re-sync from upstream: re-copy the four files above and re-apply the relative-import change.

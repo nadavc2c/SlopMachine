@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "slop",
+  "displayName": "slop — generative content for agents",
+  "version": "0.1.0",
+  "description": "Drive the slop CLI: local GPU-accelerated generative content (image with styles + identity, and AI-dance / pose-driven animation). Diffusers-native, no ComfyUI.",
+  "author": {
+    "name": "Nadav",
+    "url": "https://github.com/nadavc2c"
+  },
+  "homepage": "https://github.com/nadavc2c/SlopMachine",
+  "repository": "https://github.com/nadavc2c/SlopMachine",
+  "license": "Apache-2.0",
+  "keywords": ["generative-ai", "image-generation", "ai-dance", "animation", "motion-transfer", "diffusers", "cli", "agent-skill", "wan", "stable-diffusion"]
+}

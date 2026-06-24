@@ -1,0 +1,5 @@
+name: anime
+positive: "{prompt}, anime style, masterpiece, best quality, very aesthetic, highly detailed, clean sharp lineart, vibrant colors, expressive eyes"
+negative: "lowres, worst quality, bad anatomy, bad hands, extra fingers, missing fingers, text, watermark, signature, jpeg artifacts, blurry, deformed"
+gen_defaults:
+  guidance_scale: 7.0

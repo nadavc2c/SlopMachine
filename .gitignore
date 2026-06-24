@@ -1,0 +1,27 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Generated artifacts
+outputs/
+
+# Local model weights (downloaded via `hf`, kept out of git)
+models/
+*.safetensors
+*.ckpt
+*.gguf
+*.pt
+*.bin
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
