@@ -12,8 +12,9 @@ def test_registry_parses():
 
 def test_default_image_model():
     key, spec = get_model("image")
-    assert key == "sdxl"
-    assert spec.repo_id == "stabilityai/stable-diffusion-xl-base-1.0"
+    assert key == "flux2-klein-4b"  # current bleeding-edge default (FLUX.2 klein)
+    assert spec.repo_id == "black-forest-labs/FLUX.2-klein-4B"
+    assert spec.pipeline == "Flux2KleinPipeline"  # not in AutoPipeline map -> explicit class
 
 
 def test_explicit_model():

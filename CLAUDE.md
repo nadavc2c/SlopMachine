@@ -64,17 +64,17 @@ uv run --extra dance slop dance --reference me.jpg --driving dance.mp4 -o output
 - `cli.py` — Typer CLI (thin; heavy imports deferred into commands).
 - `config.py` — pydantic schemas + loaders; repo-local `outputs/`, `models/`, HF-cache containment.
 - `registry.py` — capability → `ModelSpec` (reads `src/slopmachine/config/models.yaml`). The only model-lookup path.
-- `hardware.py` — VRAM detection + `LoadPlan` (dtype / offload / fp8 / VAE-tiling). **All VRAM-fitting
-  logic lives here**; stages ask it for a plan.
+- `hardware.py` — VRAM detection + `LoadPlan` (dtype / offload / VAE-tiling; NO fp8 on sm_120). **All
+  VRAM-fitting logic lives here**; stages ask it for a plan.
 - `pipeline/base.py` — `Stage` interface (`run(**inputs) -> dict`). The modular unit.
-- `pipeline/image.py` — image stage: `AutoPipelineForText2Image`, model-agnostic kwarg filtering,
-  optional identity adapter (IP-Adapter).
+- `pipeline/image.py` — image stage: `AutoPipelineForText2Image` (or an explicit registry `pipeline`
+  class, e.g. `Flux2KleinPipeline` / `QwenImagePipeline`), model-agnostic kwarg filtering, optional
+  identity adapter (IP-Adapter).
 - `pipeline/pose.py` — `PoseStage`: driving video → pose-skeleton + face videos (ONNX YOLO+ViTPose on
   CPU), reusing the vendored official Wan preprocessing.
 - `pipeline/animation.py` — `AnimateStage`: `WanAnimatePipeline` (AI dance). 16GB fit via the OFFICIAL
   diffusers group-offloading recipe (bf16, NO fp8, NO `pipe.to(cuda)`).
 - `vendor/wan_animate_preprocess/` — vendored official Wan-Animate preprocessing (Apache-2.0; see NOTICE).
-- `runner.py` — chains stages (output of one → input of next).
 - `src/slopmachine/config/models.yaml` — the registry. `src/slopmachine/config/styles/*.yaml` — prompt presets (anime/cyberpunk/casino).
 
 ## Dependency policy — lean core, opt-in extras
@@ -83,10 +83,9 @@ uv run --extra dance slop dance --reference me.jpg --driving dance.mp4 -o output
 - **Fitting big models into 16 GB uses STOCK torch/diffusers** (CPU/group offload, VAE tiling) — zero
   extra deps. For **video/animation** the official path is diffusers **group offloading** (transformer
   leaf-level + `use_stream` + `low_cpu_mem_usage`, text-encoder block-level), in `pipeline/animation.py`.
-- **fp8 layerwise casting is BROKEN on this stack** (Blackwell `sm_120` + torch cu128): fp8 matmul
-  raises `CUBLAS_STATUS_INTERNAL_ERROR` and falls back to a slow unfused path. Do NOT use fp8 here — use
-  bf16 + group offloading. (`hardware.py`'s generic fp8 plan is fine for smaller image models; AnimateStage
-  deliberately ignores it.)
+- **fp8 layerwise casting is BROKEN on this stack** (Blackwell `sm_120`): fp8 matmul raises
+  `CUBLAS_STATUS_INTERNAL_ERROR` and falls back to a slow unfused path. Do NOT use fp8 here — use bf16 +
+  offload + VAE tiling. (fp8 has been removed from `hardware.py`'s plan entirely.)
 - **The `dance` extra** (`uv sync --extra dance`: onnxruntime · opencv-python-headless · imageio[-ffmpeg]
   · matplotlib · ftfy) is opt-in and needed at RUNTIME by `slop dance` — run it as
   `uv run --extra dance slop dance ...` (a bare `uv run` re-syncs to core and uninstalls it). CPU

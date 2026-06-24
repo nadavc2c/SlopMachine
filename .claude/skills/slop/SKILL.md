@@ -13,12 +13,12 @@ license: See LICENSE / model cards (per-model; recorded in the registry).
 compatibility: >-
   Requires the SlopMachine repo, Astral `uv`, Python 3.14, and an NVIDIA GPU (CUDA 12.8+, ~16GB VRAM
   for video/dance). CPU-only works for some commands but is slow. Run scripts/bootstrap on first use.
-allowed-tools: Bash(uv run slop *) Bash(uv run slop:*) Bash(uv sync *) Bash(pwsh *) Bash(bash *)
+allowed-tools: Bash(uv run:*) Bash(uv sync:*) Bash(pwsh:*) Bash(bash:*)
 shell: powershell
 metadata:
   project: SlopMachine
   cli: slop
-  version: "0.1"
+  version: "0.1.0"
 ---
 
 # slop — generative content, by CLI

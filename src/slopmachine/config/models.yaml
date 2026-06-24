@@ -6,35 +6,69 @@
 
 capabilities:
   image:
-    default: sdxl
+    default: flux2-klein-4b
     models:
+      # PERIODIC-UPDATE-RESEARCH: image-default | last-verified=2026-06-24 | latest-stable=FLUX.2-klein-4B
+      #   source=https://huggingface.co/black-forest-labs/FLUX.2-klein-4B  (Apache-2.0, ungated)
+      #   verified: repo exists + ungated; Flux2KleinPipeline does text-to-image in diffusers 0.38; ~23.7GB download.
+      #   notes: bleeding-edge fast default (FLUX.2 klein, 4-step distilled, Jan 2026); needs the EXPLICIT pipeline
+      #          class (FLUX.2 is not in diffusers' AutoPipeline t2i map); fits 16GB via model CPU offload.
+      flux2-klein-4b:
+        repo_id: black-forest-labs/FLUX.2-klein-4B
+        pipeline: Flux2KleinPipeline
+        precision: bf16
+        min_vram_gb: 16
+        license: Apache-2.0
+        tier: fast
+        gen_defaults:
+          num_inference_steps: 4
+          width: 1024
+          height: 1024
+        notes: Default. FLUX.2 klein (4B, distilled 4-step), Apache-2.0, ungated. ~24GB; 16GB via model offload.
+      # PERIODIC-UPDATE-RESEARCH: image-quality | last-verified=2026-06-24 | latest-stable=Qwen-Image-2512
+      #   source=https://huggingface.co/Qwen/Qwen-Image-2512  (Apache-2.0, ungated, text-to-image)
+      #   verified: repo exists + ungated; QwenImagePipeline (explicit, not in AutoPipeline map); ~57.7GB download.
+      #   notes: Qwen calls it the strongest open image model; 20B MMDiT + Qwen2.5-VL encoder; heavy/slow on 16GB.
+      qwen-image:
+        repo_id: Qwen/Qwen-Image-2512
+        pipeline: QwenImagePipeline
+        precision: bf16
+        min_vram_gb: 32
+        license: Apache-2.0
+        tier: quality
+        gen_defaults:
+          num_inference_steps: 30
+          width: 1024
+          height: 1024
+        notes: Max-quality tier (20B MMDiT, best in-image text). ~58GB; on 16GB uses model offload + VAE tiling (slow).
+      # PERIODIC-UPDATE-RESEARCH: image-flux1 | last-verified=2026-06-24 | latest-stable=superseded by FLUX.2
+      #   source=https://huggingface.co/black-forest-labs/FLUX.1-dev  notes: prior-gen (12B, Aug 2024); gated.
+      flux-dev:
+        repo_id: black-forest-labs/FLUX.1-dev
+        precision: bf16
+        min_vram_gb: 16
+        license: FLUX.1-dev Non-Commercial (free local use)
+        tier: prior-gen
+        gen_defaults:
+          num_inference_steps: 28
+          guidance_scale: 3.5
+          width: 1024
+          height: 1024
+        notes: Prior-gen (12B, Aug 2024), superseded by FLUX.2. Gated repo (`hf auth login`); model offload on 16GB.
+      # Legacy / low-VRAM fallback (2023). NOT the default - kept for 8GB cards + the huge SDXL LoRA/ControlNet ecosystem.
       sdxl:
         repo_id: stabilityai/stable-diffusion-xl-base-1.0
         precision: fp16
         variant: fp16
         min_vram_gb: 8
         license: OpenRAIL++-M
-        tier: fast
+        tier: legacy
         gen_defaults:
           num_inference_steps: 30
           guidance_scale: 7.0
           width: 1024
           height: 1024
-        notes: Verified scaffold default; comfortable on 16GB, huge LoRA ecosystem.
-      flux-dev:
-        repo_id: black-forest-labs/FLUX.1-dev
-        precision: bf16
-        min_vram_gb: 16
-        license: FLUX.1-dev Non-Commercial (free local use)
-        tier: quality
-        gen_defaults:
-          num_inference_steps: 28
-          guidance_scale: 3.5
-          width: 1024
-          height: 1024
-        notes: >-
-          Candidate quality tier (12B DiT). Gated repo (run `hf auth login`). On 16GB, hardware.py
-          applies fp8 layerwise casting + model CPU offload. Confirm best option via /slop-models.
+        notes: Legacy 2023 fallback for low-VRAM (8GB) + the SDXL LoRA/ControlNet ecosystem. Not the default.
       # --- REMOTE, token-based backends (no local GPU needed) ------------------------------------
       # OFF by default: they only run with SLOP_ALLOW_CLOUD=1 + the provider token (resolve_provider
       # gate). min_vram_gb 0 = runs on the provider's infra. Model ids refreshed via /slop-models.

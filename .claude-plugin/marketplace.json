@@ -1,18 +1,16 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "slopmachine",
   "owner": {
     "name": "Nadav",
     "url": "https://github.com/nadavc2c"
   },
-  "metadata": {
-    "description": "SlopMachine — the Swiss-army-knife of generative content, built to be driven by AI agents."
-  },
+  "description": "SlopMachine — the Swiss-army-knife of generative content, built to be driven by AI agents.",
   "plugins": [
     {
       "name": "slop",
       "source": "./.claude/skills/slop",
-      "description": "Local GPU generative-content CLI for AI agents: image (styles + identity) and AI-dance (animate a person from a photo + a driving video). Diffusers-native, no ComfyUI.",
-      "version": "0.1.0"
+      "description": "Local GPU generative-content CLI for AI agents: image (styles + identity) and AI-dance (animate a person from a photo + a driving video). Diffusers-native, no ComfyUI."
     }
   ]
 }
