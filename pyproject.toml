@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Nadav", email = "nadavc2c@users.noreply.github.com" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "accelerate>=1.14.0",
     "diffusers>=0.38.0",
@@ -15,21 +15,23 @@ dependencies = [
     "pydantic>=2.13.4",
     "pyyaml>=6.0.3",
     "safetensors>=0.8.0",
-    "torch>=2.11.0",
-    "torchvision>=0.26.0",
+    "torch>=2.12.1",
+    "torchvision>=0.27.0",
     "transformers>=5.12.1",
-    "typer>=0.25.1",
+    # PERIODIC-UPDATE-RESEARCH: typer | last-verified=2026-06-24 | latest-stable=0.26.7 but CAPPED here
+    #   reason=huggingface-hub 1.20.1 requires typer<0.26.0, so 0.25.x is our newest compatible (verified via `uv lock`).
+    "typer>=0.25.1,<0.26.0",
 ]
 
 [project.optional-dependencies]
 # AI-dance ("pose-skeleton extraction -> motion transfer") preprocessing + video I/O.
 # Opt-in only: `uv sync --extra dance`. Kept lean and OFFICIAL:
 #  - CPU onnxruntime on purpose (the -gpu wheel lacks Blackwell sm_120 kernels;
-#    pose extraction on a short clip is light, and the heavy diffusion runs on torch cu128).
+#    pose extraction on a short clip is light, and the heavy diffusion runs on torch cu130).
 #  - opencv-python-headless = no GUI deps for a CLI tool.
 #  - matplotlib + onnxruntime are what the vendored official Wan-Animate pose preprocessing needs
 #    (see src/slopmachine/vendor/wan_animate_preprocess/). imageio[-ffmpeg] writes the mp4s.
-# 16GB-VRAM fitting still uses STOCK torch/diffusers (offload + fp8 + VAE tiling); no quant libs here.
+# 16GB-VRAM fitting still uses STOCK torch/diffusers (offload + VAE tiling); no quant libs here.
 dance = [
     "opencv-python-headless>=4.13.0",
     "onnxruntime>=1.27.0",
@@ -52,16 +54,18 @@ slop = "slopmachine.cli:app"
 requires = ["uv_build>=0.11.23,<0.12.0"]
 build-backend = "uv_build"
 
-# PyTorch must come from NVIDIA's CUDA wheel index, not PyPI (PyPI's Windows torch
-# is CPU-only). cu128 has Blackwell sm_120 + Windows cp312 wheels. Bump to a newer
-# cuXXX index here if/when we want a newer CUDA build.
+# PyTorch must come from NVIDIA's CUDA wheel index, not PyPI (PyPI's Windows torch is CPU-only).
+# PERIODIC-UPDATE-RESEARCH: torch-index | last-verified=2026-06-24 | latest-stable=cu130 / torch>=2.12.1
+#   source=https://download.pytorch.org/whl/cu130/torch/  (cu130 = current stable CUDA default; supports
+#   Blackwell sm_120; ships a cp314 Windows wheel. cu128 is FROZEN — no torch >2.11 — which stranded us.)
+#   notes: re-check monthly that cu130 still carries the newest cp314/sm_120 Windows wheel — PyTorch rotates indexes.
 [tool.uv.sources]
-torch = { index = "pytorch-cu128" }
-torchvision = { index = "pytorch-cu128" }
+torch = { index = "pytorch-cu130" }
+torchvision = { index = "pytorch-cu130" }
 
 [[tool.uv.index]]
-name = "pytorch-cu128"
-url = "https://download.pytorch.org/whl/cu128"
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
 explicit = true
 
 [dependency-groups]
