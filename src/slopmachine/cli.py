@@ -142,6 +142,9 @@ def image(
     guidance: Optional[float] = typer.Option(None, "--guidance", "-g", help="Guidance scale."),
     width: Optional[int] = typer.Option(None, "--width"),
     height: Optional[int] = typer.Option(None, "--height"),
+    pag: bool = typer.Option(True, "--pag/--no-pag", help="Perturbed-Attention Guidance: structural anti-slop on the SDXL tier (auto-skipped on FLUX/Qwen). On by default; --no-pag for the fastest path."),
+    pag_scale: float = typer.Option(3.0, "--pag-scale", help="PAG strength (higher = fewer artifacts; ~3 is a good default)."),
+    negative: Optional[str] = typer.Option(None, "--negative", help="Extra negative-prompt terms to append (the anti-slop baseline is always applied on the SDXL tier)."),
     seed: Optional[int] = typer.Option(None, "--seed", help="Seed for reproducibility."),
     out: Optional[Path] = typer.Option(None, "--out", "-o", help="Output PNG path."),
     as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON result (suppresses progress)."),
@@ -149,13 +152,19 @@ def image(
     """Generate an image from a text prompt."""
     from .pipeline.image import ImageStage
 
-    final_prompt, negative, style_defaults = prompt, "", {}
+    final_prompt, style_defaults = prompt, {}
+    neg_parts = [config.DEFAULT_NEGATIVE]  # anti-"slop" baseline (anatomy/quality), always on
     if style:
         preset = _safe(config.load_style, style)
-        final_prompt, negative = preset.apply(prompt)
+        final_prompt, style_neg = preset.apply(prompt)
+        if style_neg:
+            neg_parts.append(style_neg)
         style_defaults = preset.gen_defaults
+    if negative:
+        neg_parts.append(negative)
+    negative_prompt = ", ".join(neg_parts)
 
-    stage = _safe(ImageStage, model_key=model, provider=provider)
+    stage = _safe(ImageStage, model_key=model, provider=provider, pag=pag, pag_scale=pag_scale)
 
     gen = dict(style_defaults)
     for key, value in {"num_inference_steps": steps, "guidance_scale": guidance, "width": width, "height": height}.items():
@@ -168,10 +177,11 @@ def image(
     if not as_json:
         typer.echo(f"Model:  {stage.model_key} ({stage.spec.repo_id})")
         typer.echo(f"Plan:   {hardware_plan(stage)}")
+        typer.echo("PAG:    " + (f"on (scale {pag_scale:.1f})" if stage.pag else "off"))
         typer.echo("Generating (first run downloads weights)...")
     result = stage.run(
         prompt=final_prompt,
-        negative_prompt=negative,
+        negative_prompt=negative_prompt,
         identity_image=str(identity) if identity else None,
         identity_scale=identity_scale,
         seed=seed,
@@ -182,7 +192,8 @@ def image(
         typer.echo(json.dumps({
             "path": str(result.get("path")) if result.get("path") else None,
             "model": result.get("model"),
-            "provider": getattr(stage.spec, "provider", "local"),
+            "provider": result.get("provider", "local"),
+            "pag": result.get("pag", stage.pag),
             "seed": seed,
             **{k: v for k, v in gen.items() if k in ("num_inference_steps", "guidance_scale", "width", "height")},
         }, indent=2))

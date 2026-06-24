@@ -107,7 +107,15 @@ uv run --extra dance slop dance --reference me.jpg --driving dance.mp4 -o output
 - **Foundation + image (done):** `slop image` (+ identity / "image of me").
 - **AI dance (done):** `slop dance` — pose-skeleton extraction → Wan2.2-Animate motion transfer,
   verified ~12.5 GB on the RTX 5080. Companion Agent Skill: `.claude/skills/slop/`.
-- **Next:** image/text → video; faster dance (distilled few-step); curated CC0 driving-clip catalog;
-  CLI-fied common ComfyUI workflows (upscale / inpaint / controlnet / …); music (ACE-Step / Stable Audio).
-- **Packaging follow-up:** ship `config/` as package data via `importlib.resources` so `slop` works
-  when installed outside the repo (today the skill bootstrap locates the repo by `pyproject.toml`).
+- **Portable backends + install-anywhere (done):** local CUDA/MPS/CPU + opt-in token-gated remote
+  providers (cloud OFF by default); `config/` shipped as package data via `importlib.resources`.
+- **Anti-"slop" image quality (in progress):** PAG + anti-anatomy negatives (the defaults) → opt-in
+  best-of-N with an agent/reward judge → ADetailer-style hand/face inpaint → ControlNet conditioning.
+- **Character consistency + recipe workflows (sticker packs):** a saved **character** (reference image +
+  locked style/seed via IP-Adapter → optional per-character LoRA) run through a library of **recipes**
+  (poses / costumes / actions) to emit uniform sticker-style packs — workflows as human-readable data
+  (`slop sticker-pack --character X`), curated/extended by Claude, not a ComfyUI node graph.
+- **★ North star:** a fully autonomous, Claude-driven **TikTok slop machine** — brief → visuals → music
+  → captions → ffmpeg assembly (9:16, burned-in captions) → post-ready clip.
+- **Next:** image/text → video; music (ACE-Step / Stable Audio); faster dance (distilled few-step);
+  curated CC0 driving-clip catalog; CLI-fied common ComfyUI workflows (upscale / inpaint / …).

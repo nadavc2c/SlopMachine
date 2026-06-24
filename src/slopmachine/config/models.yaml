@@ -15,6 +15,7 @@ capabilities:
         min_vram_gb: 8
         license: OpenRAIL++-M
         tier: fast
+        supports_pag: true        # SDXL: PAG (Perturbed-Attention Guidance) on by default — cleaner structure/anatomy
         gen_defaults:
           num_inference_steps: 30
           guidance_scale: 7.0

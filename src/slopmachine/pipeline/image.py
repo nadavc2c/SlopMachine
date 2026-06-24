@@ -30,11 +30,22 @@ def _accepted_kwargs(pipe, kwargs: dict[str, Any]) -> dict[str, Any]:
 class ImageStage(Stage):
     name = "image"
 
-    def __init__(self, model_key: Optional[str] = None, provider: Optional[str] = None):
+    def __init__(
+        self,
+        model_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        pag: bool = True,
+        pag_scale: float = 3.0,
+    ):
         self.model_key, self.spec = get_model("image", model_key)
         # Resolve + GATE the provider up front: raises SlopError if a paid cloud backend is selected
         # without the SLOP_ALLOW_CLOUD opt-in (and a token). Default is the free local backend.
         self.provider = config.resolve_provider(self.spec, provider)
+        # PAG (Perturbed-Attention Guidance): training-free structural anti-"slop". diffusers supports it
+        # on the SDXL/PixArt tier only (registry flag `supports_pag`) and only on the local backend; it is
+        # a no-op everywhere else. On by default where supported.
+        self.pag = bool(pag) and self.provider == "local" and bool(getattr(self.spec, "supports_pag", False))
+        self.pag_scale = pag_scale
         self._pipe = None
         self._plan = None
         self._identity_loaded = False
@@ -49,6 +60,10 @@ class ImageStage(Stage):
         kwargs: dict[str, Any] = {"torch_dtype": plan.dtype}
         if self.spec.variant:
             kwargs["variant"] = self.spec.variant
+        if self.pag:
+            # AutoPipeline loads the PAG variant (e.g. StableDiffusionXLPAGPipeline) — official diffusers.
+            kwargs["enable_pag"] = True
+            kwargs["pag_applied_layers"] = ["mid"]
         pipe = AutoPipelineForText2Image.from_pretrained(self.spec.repo_id, **kwargs)
 
         # fp8 layerwise casting on the heavy denoiser (transformer or unet) — stock torch.
@@ -129,6 +144,8 @@ class ImageStage(Stage):
         full["prompt"] = prompt
         if negative_prompt:
             full["negative_prompt"] = negative_prompt
+        if self.pag:
+            full["pag_scale"] = self.pag_scale
         if seed is not None:
             full["generator"] = torch.Generator(device="cpu").manual_seed(seed)
         if identity_image:
@@ -142,4 +159,4 @@ class ImageStage(Stage):
         if out_path:
             out_path.parent.mkdir(parents=True, exist_ok=True)
             image.save(out_path)
-        return {"image": image, "path": out_path, "model": self.model_key, "provider": "local"}
+        return {"image": image, "path": out_path, "model": self.model_key, "provider": "local", "pag": self.pag}

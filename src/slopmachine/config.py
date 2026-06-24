@@ -19,6 +19,16 @@ class SlopError(Exception):
     """A user-facing error (bad model/capability/style). The CLI prints it cleanly."""
 
 
+# Baseline anti-"slop" negative prompt (anatomy + quality), applied on the SDXL tier even without a
+# style. Harmlessly dropped for pipelines that take no negative_prompt (e.g. FLUX/Qwen) via the
+# ImageStage kwarg filter — so it never breaks model-agnostic generation.
+DEFAULT_NEGATIVE = (
+    "deformed, bad anatomy, disfigured, mutated, extra fingers, fused fingers, too many fingers, "
+    "extra limbs, missing limbs, malformed limbs, disconnected limbs, floating limbs, "
+    "poorly drawn hands, poorly drawn face, low quality, lowres, blurry, jpeg artifacts, watermark, text"
+)
+
+
 def _package_dir() -> Path:
     """The installed slopmachine package dir — resolves whether editable or wheel-installed,
     so the bundled config/ (registry + styles) is found without needing the source repo."""
@@ -119,6 +129,7 @@ class ModelSpec(BaseModel):
     license: str = "unknown"
     tier: Optional[str] = None        # informational: "fast" | "quality" | ...
     provider: str = "local"           # "local" (diffusers) | "hf-inference" | "google-genai"
+    supports_pag: bool = False        # diffusers PAG works on the SDXL/PixArt tier only (structural anti-slop)
     pipeline: Optional[str] = None    # explicit diffusers pipeline class; else AutoPipeline
     subfolder: Optional[str] = None   # for adapters
     weight_name: Optional[str] = None # for adapters
