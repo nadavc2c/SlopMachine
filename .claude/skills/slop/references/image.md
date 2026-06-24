@@ -25,9 +25,10 @@ uv run slop image "a fox-girl mascot, slot machine" --style casino --best-of 3 -
 ```
 
 ## Notes
-- First run downloads the image model (~7 GB) into the repo-local cache. Comfortable on 16 GB.
-- `--identity` uses a global IP-Adapter: strong identity, weaker scene control (a face-only adapter
-  is a planned upgrade). Lower `--identity-scale` if the scene/prompt isn't showing.
+- First run downloads the default model (FLUX.2-klein-4B, ~24 GB) into the repo-local cache; it runs on
+  16 GB via model offload + VAE tiling. The `qwen-image` quality tier is larger (~58 GB).
+- `--identity` (IP-Adapter) currently works **only with the SDXL model** — add `-m sdxl`. The adapter is
+  SDXL-specific; a FLUX.2/Qwen identity path is a planned upgrade. Lower `--identity-scale` if the scene isn't showing.
 - **Clean output comes from the model, not band-aids.** The default is a current best-in-class model
   (modern DiT models solve anatomy/hands at the architecture level). For the occasional bad sample,
   raise `--best-of` and let the agent pick the cleanest.

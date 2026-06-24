@@ -40,7 +40,8 @@ operationalize these.
 ## Environment
 
 - Windows 11 native · RTX 5080 16 GB (`sm_120`) · driver CUDA 13.3.
-- Python **3.14** (uv-managed, see `.python-version`) · `torch` from the **cu128** index.
+- Python **3.14** (uv-managed, see `.python-version`) · `torch` (>=2.12.1) from the **cu130** index
+  (cu128 is frozen — see `docs/PERIODIC-UPDATE.md`).
 - Verify GPU: `uv run slop info` (expects `sm_120`, ~16 GB).
 
 ## Commands

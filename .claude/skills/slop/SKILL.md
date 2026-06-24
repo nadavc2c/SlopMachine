@@ -81,7 +81,7 @@ flags and examples before composing a call. `--json` (where shown) gives machine
 
 ## Operating notes (set expectations, don't treat as a hang)
 
-- **First run of any model downloads large weights** (image ~7GB; the dance model ~77GB) — minutes,
+- **First run of any model downloads large weights** (default image ~24GB; the dance model ~77GB) — minutes,
   one time, into the repo cache.
 - **`slop dance` is slow on 16GB** (CPU↔GPU layer streaming): expect **minutes per clip**. It is not
   hung. Keep clips short and resolution modest; raise `--steps` only for final quality.

@@ -21,6 +21,6 @@ Write-Host "`nEnvironment / GPU check:"
 uv run slop info
 
 Write-Host "`nBootstrap complete. Weights download on first use, or pre-fetch:"
-Write-Host "  uv run slop models download image       # ~7GB"
+Write-Host "  uv run slop models download image       # ~24GB (FLUX.2-klein-4B default)"
 Write-Host "  uv run slop models download animation   # ~77GB (dance engine)"
 Write-Host "  uv run slop assets download pose         # small ONNX models for dance"

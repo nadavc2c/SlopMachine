@@ -7,7 +7,7 @@ driving video into the ``src_pose.mp4`` (skeleton) + ``src_face.mp4`` that ``Wan
 expects (the diffusers pipeline does not include this step).
 
 The ONNX pose models run on CPU onnxruntime — the GPU build lacks Blackwell sm_120 kernels, and
-pose extraction on a short clip is light. The heavy diffusion runs separately on torch (cu128).
+pose extraction on a short clip is light. The heavy diffusion runs separately on torch (cu130).
 
 Heavy imports are deferred into methods so importing this module stays cheap.
 """

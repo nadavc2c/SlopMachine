@@ -130,7 +130,7 @@ capabilities:
           Apache-2.0, ungated. ~76.6GB bf16 repo. 16GB fit = OFFICIAL diffusers group-offloading recipe
           (AnimateStage): transformer leaf_level + use_stream + low_cpu_mem_usage, text_encoder
           block_level, VAE upcast to fp32 and resident; NO pipe.to(cuda); NO fp8 layerwise casting
-          (fp8 matmul fails on Blackwell sm_120 + torch cu128). VERIFIED ~12.5GB peak on the RTX 5080.
+          (fp8 matmul fails on Blackwell sm_120). VERIFIED ~12.5GB peak on the RTX 5080.
           REQUIRES the 'pose' assets to turn the raw driving video into pose+face videos first
           (preprocessing is not in diffusers yet -> done by PoseStage). Quantized/GGUF loading is
           currently broken in diffusers for Wan (issue #12009) -> re-check for a faster path later.

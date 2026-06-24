@@ -57,7 +57,7 @@ class AnimateStage(Stage):
         # GROUP OFFLOADING in bf16. CRITICAL: do NOT call pipe.to("cuda") afterwards — that pulls the
         # full ~32B transformer onto the GPU and OOMs; the group-offload hooks manage device placement
         # and stream layers from CPU. fp8 layerwise casting is intentionally skipped: it fails on
-        # Blackwell sm_120 + torch cu128 (CUBLAS_STATUS_INTERNAL_ERROR -> slow unfused fallback).
+        # Blackwell sm_120 (CUBLAS_STATUS_INTERNAL_ERROR -> slow unfused fallback) regardless of CUDA build.
         if plan.offload != "none":
             from diffusers.hooks.group_offloading import apply_group_offloading
 

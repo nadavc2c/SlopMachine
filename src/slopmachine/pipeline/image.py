@@ -77,6 +77,12 @@ class ImageStage(Stage):
     def load_identity(self, adapter_key: Optional[str] = None):
         """Load an identity adapter (e.g. IP-Adapter) onto the pipeline."""
         pipe = self.load()
+        if not hasattr(pipe, "load_ip_adapter"):
+            # The shipped IP-Adapter is SDXL-only; FLUX.2/Qwen pipelines can't load it.
+            raise config.SlopError(
+                f"--identity uses an SDXL IP-Adapter, which model '{self.model_key}' does not support. "
+                f"Re-run with the SDXL model: add `-m sdxl`."
+            )
         _, adapter = get_model("identity", adapter_key)
         pipe.load_ip_adapter(
             adapter.repo_id,

@@ -24,6 +24,6 @@ uv run slop info
 
 echo
 echo "Bootstrap complete. Weights download on first use, or pre-fetch:"
-echo "  uv run slop models download image       # ~7GB"
+echo "  uv run slop models download image       # ~24GB (FLUX.2-klein-4B default)"
 echo "  uv run slop models download animation   # ~77GB (dance engine)"
 echo "  uv run slop assets download pose         # small ONNX models for dance"
