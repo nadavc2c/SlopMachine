@@ -54,6 +54,55 @@ def configure_hf_cache() -> Path:
     return Path(os.environ["HF_HOME"])
 
 
+# --- Providers / cloud opt-in gate ------------------------------------------------------------
+# Remote providers cost money. They are OFF by default: resolve_provider() refuses them unless the
+# human has set SLOP_ALLOW_CLOUD *and* a token is present — so no code path can spend by accident.
+_REMOTE_PROVIDERS = ("hf-inference", "google-genai")
+_PROVIDER_TOKENS = {
+    "hf-inference": ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"),
+    "google-genai": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+}
+
+
+def cloud_allowed() -> bool:
+    """True only if the human opted into paid cloud calls via SLOP_ALLOW_CLOUD."""
+    return os.environ.get("SLOP_ALLOW_CLOUD", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def provider_token(provider: str) -> Optional[str]:
+    """Return the first set token env value for a remote provider, or None."""
+    for env in _PROVIDER_TOKENS.get(provider, ()):
+        value = os.environ.get(env)
+        if value:
+            return value
+    return None
+
+
+def resolve_provider(spec, cli_provider: Optional[str] = None) -> str:
+    """Pick the provider (cli > SLOP_PROVIDER > spec.provider > 'local') and ENFORCE the cloud gate.
+
+    Single choke point: a remote/paid provider is refused unless SLOP_ALLOW_CLOUD is set AND a token
+    is present, so nothing spends money without an explicit human opt-in.
+    """
+    provider = (
+        cli_provider or os.environ.get("SLOP_PROVIDER") or getattr(spec, "provider", None) or "local"
+    ).strip()
+    if provider == "local":
+        return provider
+    if provider not in _REMOTE_PROVIDERS:
+        raise SlopError(f"Unknown provider '{provider}'. Known: local, {', '.join(_REMOTE_PROVIDERS)}.")
+    if not cloud_allowed():
+        raise SlopError(
+            f"Provider '{provider}' is a paid cloud backend, disabled by default to prevent accidental "
+            f"token spend. Opt in with SLOP_ALLOW_CLOUD=1 (and set {' or '.join(_PROVIDER_TOKENS[provider])})."
+        )
+    if not provider_token(provider):
+        raise SlopError(
+            f"Provider '{provider}' needs an API token; set one of: {', '.join(_PROVIDER_TOKENS[provider])}."
+        )
+    return provider
+
+
 class ModelSpec(BaseModel):
     """One model (or adapter) entry in the registry."""
 
@@ -63,6 +112,7 @@ class ModelSpec(BaseModel):
     min_vram_gb: float = 8.0          # rough footprint; drives the load plan
     license: str = "unknown"
     tier: Optional[str] = None        # informational: "fast" | "quality" | ...
+    provider: str = "local"           # "local" (diffusers) | "hf-inference" | "google-genai"
     pipeline: Optional[str] = None    # explicit diffusers pipeline class; else AutoPipeline
     subfolder: Optional[str] = None   # for adapters
     weight_name: Optional[str] = None # for adapters

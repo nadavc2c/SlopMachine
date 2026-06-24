@@ -35,6 +35,30 @@ capabilities:
         notes: >-
           Candidate quality tier (12B DiT). Gated repo (run `hf auth login`). On 16GB, hardware.py
           applies fp8 layerwise casting + model CPU offload. Confirm best option via /slop-models.
+      # --- REMOTE, token-based backends (no local GPU needed) ------------------------------------
+      # OFF by default: they only run with SLOP_ALLOW_CLOUD=1 + the provider token (resolve_provider
+      # gate). min_vram_gb 0 = runs on the provider's infra. Model ids refreshed via /slop-models.
+      hf-flux:
+        repo_id: black-forest-labs/FLUX.1-schnell
+        provider: hf-inference
+        min_vram_gb: 0
+        license: Apache-2.0 (FLUX.1 [schnell])
+        tier: remote
+        gen_defaults:
+          num_inference_steps: 4
+        notes: >-
+          Remote via HuggingFace Inference Providers (InferenceClient.text_to_image). Needs HF_TOKEN
+          (or HUGGING_FACE_HUB_TOKEN) + SLOP_ALLOW_CLOUD=1. Pick: `slop image --provider hf-inference -m hf-flux`.
+      google:
+        repo_id: gemini-3.1-flash-image
+        provider: google-genai
+        min_vram_gb: 0
+        license: Google Gemini API terms (paid)
+        tier: remote
+        notes: >-
+          Remote via Google Gen AI SDK — current Gemini image model ("Nano Banana"), NOT the deprecated
+          Imagen. Needs GEMINI_API_KEY (or GOOGLE_API_KEY) + SLOP_ALLOW_CLOUD=1 + the `cloud` extra
+          (`uv sync --extra cloud`). Model id refreshed via /slop-models.
 
   identity:
     default: ip-adapter-sdxl

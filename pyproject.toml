@@ -38,6 +38,12 @@ dance = [
     "imageio-ffmpeg>=0.6.0",
     "ftfy>=6.2.0",          # diffusers' WanAnimatePipeline uses ftfy.fix_text for prompt cleanup
 ]
+# Token-based REMOTE image providers (opt-in: `uv sync --extra cloud`). OFF by default and gated by
+# SLOP_ALLOW_CLOUD, so they never spend money unless the user explicitly opts in. `huggingface_hub`
+# (HF Inference) is already in core; this adds Google's Gen AI SDK.
+cloud = [
+    "google-genai>=1.0.0",
+]
 
 [project.scripts]
 slop = "slopmachine.cli:app"

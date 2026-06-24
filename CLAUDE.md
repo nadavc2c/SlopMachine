@@ -6,6 +6,14 @@ music) for an NVIDIA RTX 5080 (16 GB, Blackwell `sm_120`). A thin orchestration 
 `diffusers`. The companion Agent Skill is `.claude/skills/slop/` (the agent-facing manual + setup over
 the CLI). Agent-first CLI: discoverable `--help`, `--json` output, clean errors, no interactive prompts.
 
+## Core values
+
+**simple · portable · safe · secure · stable · well-maintained · best-practice per OFFICIAL docs only ·
+NO "hacks" that abuse the tech.** Portable = NVIDIA is first-class but `slop` runs on CUDA/MPS/CPU and
+on token-based remote providers. Safe/secure = cloud never spends without an explicit human opt-in
+(`SLOP_ALLOW_CLOUD=1`); tokens come from env, never stored/committed. The Golden Rules below
+operationalize these.
+
 ## Golden rules (non-negotiable)
 
 1. **Read the official docs FIRST — every step.** Web-search the latest official source before

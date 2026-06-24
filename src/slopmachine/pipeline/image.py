@@ -14,7 +14,7 @@ import inspect
 from pathlib import Path
 from typing import Any, Optional
 
-from .. import hardware
+from .. import config, hardware
 from ..registry import get_model
 from .base import Stage
 
@@ -30,8 +30,11 @@ def _accepted_kwargs(pipe, kwargs: dict[str, Any]) -> dict[str, Any]:
 class ImageStage(Stage):
     name = "image"
 
-    def __init__(self, model_key: Optional[str] = None):
+    def __init__(self, model_key: Optional[str] = None, provider: Optional[str] = None):
         self.model_key, self.spec = get_model("image", model_key)
+        # Resolve + GATE the provider up front: raises SlopError if a paid cloud backend is selected
+        # without the SLOP_ALLOW_CLOUD opt-in (and a token). Default is the free local backend.
+        self.provider = config.resolve_provider(self.spec, provider)
         self._pipe = None
         self._plan = None
         self._identity_loaded = False
@@ -98,6 +101,22 @@ class ImageStage(Stage):
         out: Optional[Path] = None,
         **gen_kwargs: Any,
     ) -> dict[str, Any]:
+        out_path = Path(out) if out else None
+
+        # Remote/paid provider (already gated in __init__): call the backend, skip diffusers entirely.
+        if self.provider != "local":
+            from .backends import generate_image
+
+            image = generate_image(
+                self.provider, self.spec, prompt, negative_prompt=negative_prompt,
+                **{k: v for k, v in gen_kwargs.items() if v is not None},
+            )
+            if out_path:
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                image.save(out_path)
+            return {"image": image, "path": out_path, "model": self.model_key, "provider": self.provider}
+
+        # Local diffusers path.
         import torch
         from diffusers.utils import load_image
 
@@ -120,8 +139,7 @@ class ImageStage(Stage):
 
         image = pipe(**_accepted_kwargs(pipe, full)).images[0]
 
-        out_path = Path(out) if out else None
         if out_path:
             out_path.parent.mkdir(parents=True, exist_ok=True)
             image.save(out_path)
-        return {"image": image, "path": out_path, "model": self.model_key}
+        return {"image": image, "path": out_path, "model": self.model_key, "provider": "local"}

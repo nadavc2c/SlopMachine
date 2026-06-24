@@ -42,13 +42,29 @@ def cuda_available() -> bool:
     return _torch().cuda.is_available()
 
 
+def _mps_available(t) -> bool:
+    backends = getattr(t, "backends", None)
+    mps = getattr(backends, "mps", None) if backends is not None else None
+    return bool(mps and mps.is_available())
+
+
 def device() -> str:
-    return "cuda" if cuda_available() else "cpu"
+    """Best available compute device: CUDA (tuned default) -> Apple MPS -> CPU."""
+    t = _torch()
+    if t.cuda.is_available():
+        return "cuda"
+    if _mps_available(t):
+        return "mps"
+    return "cpu"
 
 
 def gpu_name() -> str:
     t = _torch()
-    return t.cuda.get_device_name(0) if t.cuda.is_available() else "cpu"
+    if t.cuda.is_available():
+        return t.cuda.get_device_name(0)
+    if _mps_available(t):
+        return "Apple MPS"
+    return "cpu"
 
 
 def capability() -> Optional[tuple[int, int]]:
@@ -76,9 +92,14 @@ def plan_for(spec, headroom_gb: float = 2.0) -> LoadPlan:
     - Very tight fit   -> sequential CPU offload (slow but fits).
     """
     t = _torch()
-    if not t.cuda.is_available():
+    dev = device()
+    if dev == "cpu":
         return LoadPlan(t.float32, "cpu", "none", False, False)
+    if dev == "mps":
+        # Apple MPS: fp16, full on-device (the CUDA-specific offload/fp8 tricks don't apply); VAE tiling.
+        return LoadPlan(t.float16, "mps", "none", False, True)
 
+    # CUDA (the tuned default).
     vram = total_vram_gb()
     dtype = dtype_for(spec.precision)
     needs = float(getattr(spec, "min_vram_gb", 8.0))

@@ -1,0 +1,5 @@
+# Normalize line endings: LF in the repo. Scripts get platform-correct endings on checkout so the
+# cross-platform skill bootstrap stays valid (bash needs LF; PowerShell prefers CRLF).
+* text=auto
+*.sh text eol=lf
+*.ps1 text eol=crlf

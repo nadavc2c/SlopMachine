@@ -1,0 +1,31 @@
+# slop / SlopMachine
+
+> The Swiss-army-knife of generative content, built from the ground up to be driven by AI agents.
+> A local-first, CLI-driven toolkit over HuggingFace `diffusers`: text-to-image (styles + identity)
+> and the flagship "AI dance" (animate a person from a photo + a driving video, i.e. pose-skeleton
+> extraction -> motion transfer). NVIDIA is first-class, but `slop` is portable to Apple-MPS / CPU and
+> to token-based remote providers (HuggingFace Inference, Google).
+
+Drive it with `uv run slop <command>`. Every command self-documents (`slop <command> --help`) and most
+support `--json` for machine-readable output. Cloud/paid providers are OFF by default — the default
+provider is `local` (free); set `SLOP_ALLOW_CLOUD=1` to opt in. Run `slop capabilities` first to see
+what it can do and which models/backends are available.
+
+## Commands
+- `slop info [--json]`: device (cuda/mps/cpu), VRAM, cache location, backend + token availability.
+- `slop capabilities [--json]`: every capability and the command that uses it (start here).
+- `slop styles [--json]`: style presets (anime, cyberpunk, casino).
+- `slop image "PROMPT" [--style S] [--identity face.jpg] [--provider P] [--json] -o out.png`: text → image.
+- `slop dance --reference person.jpg --driving clip.mp4 [--json] -o out.mp4`: AI dance / pose-driven animation.
+- `slop models list|show|download [--json]`: the model registry (single source of truth).
+- `slop assets download pose|dance [id]`: supporting assets (pose ONNX models; dance clips).
+
+## Docs
+- [README](README.md): overview, install paths, quickstart.
+- [CLAUDE.md](CLAUDE.md): core values, golden rules, architecture, dependency policy.
+- [Agent Skill](.claude/skills/slop/SKILL.md): the agent-facing manual; `references/*.md` for per-command detail.
+
+## Install
+- Clone (recommended — needs the repo for the GPU env + weights): `git clone https://github.com/nadavc2c/SlopMachine && cd SlopMachine && uv sync`
+- Claude plugin: `/plugin marketplace add nadavc2c/SlopMachine` then `/plugin install slop@slopmachine`
+- Cross-agent skill: `npx skills add nadavc2c/SlopMachine`

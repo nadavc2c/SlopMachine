@@ -8,6 +8,7 @@ deferred into the command bodies so `slop models list` / `--help` stay instant.
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Optional
@@ -62,29 +63,43 @@ def _safe(fn, *args, **kwargs):
 
 @app.command()
 def info(as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON output.")):
-    """Show GPU / VRAM / capability / cache location."""
+    """Show device / VRAM / cache location + which backends are available."""
     from . import hardware
 
-    cuda = hardware.cuda_available()
-    cap = hardware.capability() if cuda else None
+    dev = hardware.device()
+    cap = hardware.capability() if dev == "cuda" else None
+    tokens = {
+        "local": True,
+        "hf-inference": bool(config.provider_token("hf-inference")),
+        "google-genai": bool(config.provider_token("google-genai")),
+    }
     data = {
-        "cuda": cuda,
-        "gpu": hardware.gpu_name() if cuda else None,
-        "vram_gb": round(hardware.total_vram_gb(), 1) if cuda else 0.0,
+        "device": dev,
+        "gpu": hardware.gpu_name(),
+        "vram_gb": round(hardware.total_vram_gb(), 1) if dev == "cuda" else None,
         "capability": f"sm_{cap[0]}{cap[1]}" if cap else None,
         "hf_cache": str(config.configure_hf_cache()),
+        "cloud_allowed": config.cloud_allowed(),
+        "default_provider": os.environ.get("SLOP_PROVIDER", "local"),
+        "tokens_present": tokens,
     }
     if as_json:
         typer.echo(json.dumps(data, indent=2))
         return
-    if not cuda:
-        typer.echo("CUDA not available — running on CPU.")
-        typer.echo(f"HF cache:   {data['hf_cache']}")
-        raise typer.Exit()
-    typer.echo(f"GPU:        {data['gpu']}")
-    typer.echo(f"VRAM:       {data['vram_gb']:.1f} GB")
-    typer.echo(f"Capability: {data['capability']}")
+    typer.echo(f"Device:     {dev}" + ("" if dev == "cpu" else f"  ({data['gpu']})"))
+    if data["vram_gb"] is not None:
+        typer.echo(f"VRAM:       {data['vram_gb']:.1f} GB")
+    if data["capability"]:
+        typer.echo(f"Capability: {data['capability']}")
     typer.echo(f"HF cache:   {data['hf_cache']}")
+    typer.echo(
+        "Cloud:      "
+        + ("ALLOWED (SLOP_ALLOW_CLOUD set)" if data["cloud_allowed"]
+           else "off (default; set SLOP_ALLOW_CLOUD=1 to enable paid remote providers)")
+    )
+    typer.echo(f"Provider:   {data['default_provider']} (default)")
+    have = [b for b in ("hf-inference", "google-genai") if tokens[b]]
+    typer.echo("Tokens:     " + (", ".join(have) if have else "none (local only)"))
 
 
 @app.command()
@@ -120,6 +135,7 @@ def image(
     prompt: str = typer.Argument(..., help="Text prompt."),
     style: Optional[str] = typer.Option(None, "--style", "-s", help="Style preset (see `slop styles`)."),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="Registry model key (default: registry default)."),
+    provider: Optional[str] = typer.Option(None, "--provider", help="Backend: local | hf-inference | google-genai. Cloud is OFF by default — needs SLOP_ALLOW_CLOUD=1 + a token; default is local (free)."),
     identity: Optional[Path] = typer.Option(None, "--identity", "-i", exists=True, dir_okay=False, help="Reference face image for identity preservation."),
     identity_scale: float = typer.Option(0.6, help="Identity strength 0-1. Higher = closer to the reference but weaker prompt/scene; lower it if the scene isn't showing."),
     steps: Optional[int] = typer.Option(None, "--steps", help="Inference steps."),
@@ -128,6 +144,7 @@ def image(
     height: Optional[int] = typer.Option(None, "--height"),
     seed: Optional[int] = typer.Option(None, "--seed", help="Seed for reproducibility."),
     out: Optional[Path] = typer.Option(None, "--out", "-o", help="Output PNG path."),
+    as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON result (suppresses progress)."),
 ):
     """Generate an image from a text prompt."""
     from .pipeline.image import ImageStage
@@ -138,7 +155,7 @@ def image(
         final_prompt, negative = preset.apply(prompt)
         style_defaults = preset.gen_defaults
 
-    stage = _safe(ImageStage, model_key=model)
+    stage = _safe(ImageStage, model_key=model, provider=provider)
 
     gen = dict(style_defaults)
     for key, value in {"num_inference_steps": steps, "guidance_scale": guidance, "width": width, "height": height}.items():
@@ -148,9 +165,10 @@ def image(
     if out is None:
         out = config.outputs_dir() / f"{stage.model_key}_{_slug(prompt)}.png"
 
-    typer.echo(f"Model:  {stage.model_key} ({stage.spec.repo_id})")
-    typer.echo(f"Plan:   {hardware_plan(stage)}")
-    typer.echo("Generating (first run downloads weights)...")
+    if not as_json:
+        typer.echo(f"Model:  {stage.model_key} ({stage.spec.repo_id})")
+        typer.echo(f"Plan:   {hardware_plan(stage)}")
+        typer.echo("Generating (first run downloads weights)...")
     result = stage.run(
         prompt=final_prompt,
         negative_prompt=negative,
@@ -160,7 +178,16 @@ def image(
         out=out,
         **gen,
     )
-    typer.echo(f"Saved:  {result['path']}")
+    if as_json:
+        typer.echo(json.dumps({
+            "path": str(result.get("path")) if result.get("path") else None,
+            "model": result.get("model"),
+            "provider": getattr(stage.spec, "provider", "local"),
+            "seed": seed,
+            **{k: v for k, v in gen.items() if k in ("num_inference_steps", "guidance_scale", "width", "height")},
+        }, indent=2))
+    else:
+        typer.echo(f"Saved:  {result['path']}")
 
 
 @app.command()
@@ -173,12 +200,14 @@ def dance(
     seed: Optional[int] = typer.Option(None, "--seed", help="Seed for reproducibility."),
     fps: Optional[int] = typer.Option(None, "--fps", help="Target FPS (default: driving video / preset)."),
     out: Optional[Path] = typer.Option(None, "--out", "-o", help="Output MP4 path."),
+    as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON result (suppresses progress)."),
 ):
     """AI dance: animate a person from a reference photo with a driving dance video.
 
     Two stages: pose-skeleton + face extraction from the driving video (PoseStage),
     then pose-driven motion transfer (AnimateStage / Wan2.2-Animate).
     """
+    from . import hardware
     from .pipeline.animation import AnimateStage
     from .pipeline.pose import PoseStage
 
@@ -188,22 +217,22 @@ def dance(
     if out is None:
         out = config.outputs_dir() / f"dance_{_slug(reference.stem)}.mp4"
 
-    from . import hardware
-
-    _offloaded = _safe(lambda s: hardware.plan_for(s).offload != "none", anim.spec)
-    _strategy = (
-        "bf16, group offload (transformer leaf-level + stream), fp32 VAE  [official 16GB Wan recipe]"
-        if _offloaded
-        else "bf16, full GPU, fp32 VAE"
-    )
-    typer.echo(f"Model:  {anim.model_key} ({anim.spec.repo_id})")
-    typer.echo(f"Plan:   {_strategy}")
-    typer.echo("Step 1/2: extracting pose skeleton + face from the driving video...")
+    if not as_json:
+        _offloaded = _safe(lambda s: hardware.plan_for(s).offload != "none", anim.spec)
+        _strategy = (
+            "bf16, group offload (transformer leaf-level + stream), fp32 VAE  [official 16GB Wan recipe]"
+            if _offloaded
+            else "bf16, full GPU, fp32 VAE"
+        )
+        typer.echo(f"Model:  {anim.model_key} ({anim.spec.repo_id})")
+        typer.echo(f"Plan:   {_strategy}")
+        typer.echo("Step 1/2: extracting pose skeleton + face from the driving video...")
     pose_out = pose.run(driving_video=str(driving), reference_image=str(reference), fps=fps)
-    typer.echo(f"          {pose_out['num_frames']} frames @ {pose_out['fps']} fps")
+    if not as_json:
+        typer.echo(f"          {pose_out['num_frames']} frames @ {pose_out['fps']} fps")
+        typer.echo("Step 2/2: animating (first run loads ~77GB weights with offload; minutes per clip)...")
 
     gen = {"num_inference_steps": steps} if steps is not None else {}
-    typer.echo("Step 2/2: animating (first run loads ~77GB weights with offload; minutes per clip)...")
     result = anim.run(
         reference_image=pose_out["reference_image"],
         pose_video=pose_out["pose_video"],
@@ -214,7 +243,17 @@ def dance(
         out=out,
         **gen,
     )
-    typer.echo(f"Saved:  {result['path']}")
+    if as_json:
+        typer.echo(json.dumps({
+            "path": str(result.get("path")) if result.get("path") else None,
+            "model": result.get("model"),
+            "provider": getattr(anim.spec, "provider", "local"),
+            "fps": result.get("fps"),
+            "num_frames": pose_out.get("num_frames"),
+            "seed": seed,
+        }, indent=2))
+    else:
+        typer.echo(f"Saved:  {result['path']}")
 
 
 def hardware_plan(stage) -> str:
