@@ -9,6 +9,7 @@ import json
 import os
 import re
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -59,7 +60,7 @@ def _safe(fn, *args, **kwargs):
 
 
 @app.command()
-def info(as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON output.")):
+def info(as_json: Annotated[bool, typer.Option("--json", help="Machine-readable JSON output.")] = False):
     """Show device / VRAM / cache location + which backends are available."""
     from . import hardware
 
@@ -100,7 +101,7 @@ def info(as_json: bool = typer.Option(False, "--json", help="Machine-readable JS
 
 
 @app.command()
-def styles(as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON output.")):
+def styles(as_json: Annotated[bool, typer.Option("--json", help="Machine-readable JSON output.")] = False):
     """List available style presets."""
     names = config.list_styles()
     if as_json:
@@ -111,7 +112,7 @@ def styles(as_json: bool = typer.Option(False, "--json", help="Machine-readable 
 
 
 @app.command()
-def capabilities(as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON output.")):
+def capabilities(as_json: Annotated[bool, typer.Option("--json", help="Machine-readable JSON output.")] = False):
     """List every capability and the command that uses it — start here to see what slop can do."""
     from .registry import registry
 
@@ -129,21 +130,21 @@ def capabilities(as_json: bool = typer.Option(False, "--json", help="Machine-rea
 
 @app.command()
 def image(
-    prompt: str = typer.Argument(..., help="Text prompt."),
-    style: str | None = typer.Option(None, "--style", "-s", help="Style preset (see `slop styles`)."),
-    model: str | None = typer.Option(None, "--model", "-m", help="Registry model key (default: registry default)."),
-    provider: str | None = typer.Option(None, "--provider", help="Backend: local | hf-inference | google-genai. Cloud is OFF by default — needs SLOP_ALLOW_CLOUD=1 + a token; default is local (free)."),
-    identity: Path | None = typer.Option(None, "--identity", "-i", exists=True, dir_okay=False, help="Reference face image for identity preservation."),
-    identity_scale: float = typer.Option(0.6, help="Identity strength 0-1. Higher = closer to the reference but weaker prompt/scene; lower it if the scene isn't showing."),
-    steps: int | None = typer.Option(None, "--steps", help="Inference steps."),
-    guidance: float | None = typer.Option(None, "--guidance", "-g", help="Guidance scale."),
-    width: int | None = typer.Option(None, "--width"),
-    height: int | None = typer.Option(None, "--height"),
-    negative: str | None = typer.Option(None, "--negative", help="Negative-prompt terms (used by models that support it; guidance-distilled models like FLUX/Qwen ignore it)."),
-    best_of: int = typer.Option(1, "--best-of", help="Generate N candidates for the agent to view and pick the best (agent-judged)."),
-    seed: int | None = typer.Option(None, "--seed", help="Seed for reproducibility."),
-    out: Path | None = typer.Option(None, "--out", "-o", help="Output PNG path."),
-    as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON result (suppresses progress)."),
+    prompt: Annotated[str, typer.Argument(help="Text prompt.")],
+    style: Annotated[str | None, typer.Option("--style", "-s", help="Style preset (see `slop styles`).")] = None,
+    model: Annotated[str | None, typer.Option("--model", "-m", help="Registry model key (default: registry default).")] = None,
+    provider: Annotated[str | None, typer.Option("--provider", help="Backend: local | hf-inference | google-genai. Cloud is OFF by default — needs SLOP_ALLOW_CLOUD=1 + a token; default is local (free).")] = None,
+    identity: Annotated[Path | None, typer.Option("--identity", "-i", exists=True, dir_okay=False, help="Reference face image for identity preservation.")] = None,
+    identity_scale: Annotated[float, typer.Option(help="Identity strength 0-1. Higher = closer to the reference but weaker prompt/scene; lower it if the scene isn't showing.")] = 0.6,
+    steps: Annotated[int | None, typer.Option("--steps", help="Inference steps.")] = None,
+    guidance: Annotated[float | None, typer.Option("--guidance", "-g", help="Guidance scale.")] = None,
+    width: Annotated[int | None, typer.Option("--width")] = None,
+    height: Annotated[int | None, typer.Option("--height")] = None,
+    negative: Annotated[str | None, typer.Option("--negative", help="Negative-prompt terms (used by models that support it; guidance-distilled models like FLUX/Qwen ignore it).")] = None,
+    best_of: Annotated[int, typer.Option("--best-of", help="Generate N candidates for the agent to view and pick the best (agent-judged).")] = 1,
+    seed: Annotated[int | None, typer.Option("--seed", help="Seed for reproducibility.")] = None,
+    out: Annotated[Path | None, typer.Option("--out", "-o", help="Output PNG path.")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Machine-readable JSON result (suppresses progress).")] = False,
 ):
     """Generate an image from a text prompt."""
     from .pipeline.image import ImageStage
@@ -202,15 +203,15 @@ def image(
 
 @app.command()
 def dance(
-    reference: Path = typer.Option(..., "--reference", "-r", exists=True, dir_okay=False, help="Reference person image."),
-    driving: Path = typer.Option(..., "--driving", "-d", exists=True, dir_okay=False, help="Driving dance video (the motion to transfer)."),
-    prompt: str = typer.Option("", "--prompt", "-p", help="Optional scene/style prompt."),
-    model: str | None = typer.Option(None, "--model", "-m", help="Animation model key (default: registry default)."),
-    steps: int | None = typer.Option(None, "--steps", help="Inference steps (fewer = faster)."),
-    seed: int | None = typer.Option(None, "--seed", help="Seed for reproducibility."),
-    fps: int | None = typer.Option(None, "--fps", help="Target FPS (default: driving video / preset)."),
-    out: Path | None = typer.Option(None, "--out", "-o", help="Output MP4 path."),
-    as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON result (suppresses progress)."),
+    reference: Annotated[Path, typer.Option("--reference", "-r", exists=True, dir_okay=False, help="Reference person image.")],
+    driving: Annotated[Path, typer.Option("--driving", "-d", exists=True, dir_okay=False, help="Driving dance video (the motion to transfer).")],
+    prompt: Annotated[str, typer.Option("--prompt", "-p", help="Optional scene/style prompt.")] = "",
+    model: Annotated[str | None, typer.Option("--model", "-m", help="Animation model key (default: registry default).")] = None,
+    steps: Annotated[int | None, typer.Option("--steps", help="Inference steps (fewer = faster).")] = None,
+    seed: Annotated[int | None, typer.Option("--seed", help="Seed for reproducibility.")] = None,
+    fps: Annotated[int | None, typer.Option("--fps", help="Target FPS (default: driving video / preset).")] = None,
+    out: Annotated[Path | None, typer.Option("--out", "-o", help="Output MP4 path.")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Machine-readable JSON result (suppresses progress).")] = False,
 ):
     """AI dance: animate a person from a reference photo with a driving dance video.
 
@@ -303,7 +304,7 @@ def _best_of(stage, *, n, prompt, negative_prompt, identity, identity_scale, see
 
 
 @models_app.command("list")
-def models_list(as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON output.")):
+def models_list(as_json: Annotated[bool, typer.Option("--json", help="Machine-readable JSON output.")] = False):
     """List capabilities and their candidate models (* = default)."""
     from .registry import registry
 
@@ -330,8 +331,8 @@ def models_list(as_json: bool = typer.Option(False, "--json", help="Machine-read
 
 @models_app.command("show")
 def models_show(
-    capability: str = typer.Argument(..., help="Capability name, e.g. image."),
-    model: str | None = typer.Option(None, "--model", "-m"),
+    capability: Annotated[str, typer.Argument(help="Capability name, e.g. image.")],
+    model: Annotated[str | None, typer.Option("--model", "-m")] = None,
 ):
     """Show full spec for a model."""
     from .registry import get_model
@@ -345,8 +346,8 @@ def models_show(
 
 @models_app.command("download")
 def models_download(
-    capability: str = typer.Argument(..., help="Capability name, e.g. image."),
-    model: str | None = typer.Option(None, "--model", "-m"),
+    capability: Annotated[str, typer.Argument(help="Capability name, e.g. image.")],
+    model: Annotated[str | None, typer.Option("--model", "-m")] = None,
 ):
     """Pre-fetch a model's weights into the repo-local cache."""
     from huggingface_hub import snapshot_download
@@ -364,7 +365,7 @@ def models_download(
 
 
 @assets_app.command("list")
-def assets_list(as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON output.")):
+def assets_list(as_json: Annotated[bool, typer.Option("--json", help="Machine-readable JSON output.")] = False):
     """List supporting assets: pose models + the curated dance-clip catalog."""
     from .registry import registry
 
@@ -384,8 +385,8 @@ def assets_list(as_json: bool = typer.Option(False, "--json", help="Machine-read
 
 @assets_app.command("download")
 def assets_download(
-    kind: str = typer.Argument(..., help="Asset kind: 'pose' or 'dance'."),
-    name: str | None = typer.Argument(None, help="For 'dance': the clip id (see `slop assets list`)."),
+    kind: Annotated[str, typer.Argument(help="Asset kind: 'pose' or 'dance'.")],
+    name: Annotated[str | None, typer.Argument(help="For 'dance': the clip id (see `slop assets list`).")] = None,
 ):
     """Pre-fetch supporting assets into the local cache."""
     if kind == "pose":
