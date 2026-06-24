@@ -6,8 +6,8 @@
 
 **`slop` — the Swiss-army-knife of generative content, built from the ground up to be driven by AI agents.**
 
-<sub>↑ the mascot was generated <b>by slop itself</b>, on the local RTX 5080:<br/>
-<code>uv run slop image "...a charming fox-girl mascot..." --style casino --seed 7</code></sub>
+<sub>↑ generated <b>by slop itself</b> on the local RTX 5080 — <b>FLUX.2-klein-4B</b>, agent-picked from <code>--best-of 3</code>:<br/>
+<code>uv run slop image "...a charming fox-girl mascot..." --style casino --best-of 3</code></sub>
 
 </div>
 
