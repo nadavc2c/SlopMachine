@@ -55,12 +55,11 @@ def test_stages_instantiate():
 
 # --- VRAM plan -------------------------------------------------------------------------
 
-def test_animation_plan_uses_offload_and_fp8_on_16gb(monkeypatch):
+def test_animation_plan_uses_offload_on_16gb(monkeypatch):
     monkeypatch.setattr(hardware, "_torch", lambda: _fake_torch(16))
     _, spec = get_model("animation")  # min_vram_gb == 16
     plan = hardware.plan_for(spec)
     assert plan.offload == "model"
-    assert plan.fp8_layerwise is True
     assert plan.vae_tiling is True
 
 

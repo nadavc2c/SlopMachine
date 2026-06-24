@@ -1,9 +1,9 @@
 """Hardware detection + a memory "load plan" so VRAM-fitting logic lives in ONE place.
 
 All techniques used here are stock torch + diffusers (no extra deps): dtype choice,
-``enable_model_cpu_offload`` / ``enable_sequential_cpu_offload``, VAE tiling, and
-torch-native fp8 layerwise casting. Quantization libraries are intentionally avoided
-unless a specific model proves to need them.
+``enable_model_cpu_offload`` / ``enable_sequential_cpu_offload``, and VAE tiling.
+Quantization libraries are intentionally avoided unless a specific model proves to need them.
+(No fp8: layerwise fp8 casting is broken on Blackwell sm_120 — CUBLAS_STATUS_INTERNAL_ERROR — see CLAUDE.md.)
 
 torch is imported lazily so the CLI (e.g. ``slop models list``) starts without it.
 """
@@ -22,17 +22,14 @@ def _torch():
 @dataclass
 class LoadPlan:
     dtype: object          # torch.dtype
-    device: str            # "cuda" | "cpu"
+    device: str            # "cuda" | "cpu" | "mps"
     offload: str           # "none" | "model" | "sequential"
-    fp8_layerwise: bool
     vae_tiling: bool
 
     def describe(self) -> str:
         bits = [f"dtype={str(self.dtype).replace('torch.', '')}", f"device={self.device}"]
         if self.offload != "none":
             bits.append(f"offload={self.offload}")
-        if self.fp8_layerwise:
-            bits.append("fp8-layerwise")
         if self.vae_tiling:
             bits.append("vae-tiling")
         return ", ".join(bits)
@@ -88,16 +85,19 @@ def plan_for(spec, headroom_gb: float = 2.0) -> LoadPlan:
     """Pick a load strategy for a model spec given the current GPU.
 
     - Comfortable fit  -> full GPU, no offload.
-    - Tight fit        -> model CPU offload + fp8 layerwise casting + VAE tiling.
+    - Tight fit        -> model CPU offload + VAE tiling.
     - Very tight fit   -> sequential CPU offload (slow but fits).
+
+    No fp8: layerwise fp8 casting raises CUBLAS_STATUS_INTERNAL_ERROR on Blackwell sm_120 (CLAUDE.md);
+    big models fit with bf16 + offload + VAE tiling instead.
     """
     t = _torch()
     dev = device()
     if dev == "cpu":
-        return LoadPlan(t.float32, "cpu", "none", False, False)
+        return LoadPlan(t.float32, "cpu", "none", False)
     if dev == "mps":
-        # Apple MPS: fp16, full on-device (the CUDA-specific offload/fp8 tricks don't apply); VAE tiling.
-        return LoadPlan(t.float16, "mps", "none", False, True)
+        # Apple MPS: fp16, full on-device (the CUDA-specific offload tricks don't apply); VAE tiling.
+        return LoadPlan(t.float16, "mps", "none", True)
 
     # CUDA (the tuned default).
     vram = total_vram_gb()
@@ -105,7 +105,7 @@ def plan_for(spec, headroom_gb: float = 2.0) -> LoadPlan:
     needs = float(getattr(spec, "min_vram_gb", 8.0))
 
     if vram >= needs + headroom_gb:
-        return LoadPlan(dtype, "cuda", "none", False, True)
+        return LoadPlan(dtype, "cuda", "none", True)
     if vram >= needs * 0.5:
-        return LoadPlan(dtype, "cuda", "model", True, True)
-    return LoadPlan(dtype, "cuda", "sequential", True, True)
+        return LoadPlan(dtype, "cuda", "model", True)
+    return LoadPlan(dtype, "cuda", "sequential", True)

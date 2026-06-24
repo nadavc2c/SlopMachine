@@ -142,11 +142,8 @@ def image(
     guidance: Optional[float] = typer.Option(None, "--guidance", "-g", help="Guidance scale."),
     width: Optional[int] = typer.Option(None, "--width"),
     height: Optional[int] = typer.Option(None, "--height"),
-    pag: bool = typer.Option(True, "--pag/--no-pag", help="Perturbed-Attention Guidance: structural anti-slop on the SDXL tier (auto-skipped on FLUX/Qwen). On by default; --no-pag for the fastest path."),
-    pag_scale: float = typer.Option(3.0, "--pag-scale", help="PAG strength (higher = fewer artifacts; ~3 is a good default)."),
-    negative: Optional[str] = typer.Option(None, "--negative", help="Extra negative-prompt terms to append (the anti-slop baseline is always applied on the SDXL tier)."),
-    best_of: int = typer.Option(1, "--best-of", help="Generate N candidates, then pick the cleanest. Default judge = the agent (you review them); see --judge."),
-    judge: str = typer.Option("agent", "--judge", help="How to pick from --best-of N: 'agent' (you review) | 'reward' | 'both'. (reward is an opt-in follow-up.)"),
+    negative: Optional[str] = typer.Option(None, "--negative", help="Negative-prompt terms (used by models that support it; guidance-distilled models like FLUX/Qwen ignore it)."),
+    best_of: int = typer.Option(1, "--best-of", help="Generate N candidates for the agent to view and pick the best (agent-judged)."),
     seed: Optional[int] = typer.Option(None, "--seed", help="Seed for reproducibility."),
     out: Optional[Path] = typer.Option(None, "--out", "-o", help="Output PNG path."),
     as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON result (suppresses progress)."),
@@ -155,7 +152,7 @@ def image(
     from .pipeline.image import ImageStage
 
     final_prompt, style_defaults = prompt, {}
-    neg_parts = [config.DEFAULT_NEGATIVE]  # anti-"slop" baseline (anatomy/quality), always on
+    neg_parts = []
     if style:
         preset = _safe(config.load_style, style)
         final_prompt, style_neg = preset.apply(prompt)
@@ -166,7 +163,7 @@ def image(
         neg_parts.append(negative)
     negative_prompt = ", ".join(neg_parts)
 
-    stage = _safe(ImageStage, model_key=model, provider=provider, pag=pag, pag_scale=pag_scale)
+    stage = _safe(ImageStage, model_key=model, provider=provider)
 
     gen = dict(style_defaults)
     for key, value in {"num_inference_steps": steps, "guidance_scale": guidance, "width": width, "height": height}.items():
@@ -177,14 +174,13 @@ def image(
         out = config.outputs_dir() / f"{stage.model_key}_{_slug(prompt)}.png"
 
     if best_of and best_of > 1:
-        _best_of(stage, n=best_of, judge=judge, prompt=final_prompt, negative_prompt=negative_prompt,
+        _best_of(stage, n=best_of, prompt=final_prompt, negative_prompt=negative_prompt,
                  identity=identity, identity_scale=identity_scale, seed=seed, out=out, gen=gen, as_json=as_json)
         return
 
     if not as_json:
         typer.echo(f"Model:  {stage.model_key} ({stage.spec.repo_id})")
         typer.echo(f"Plan:   {hardware_plan(stage)}")
-        typer.echo("PAG:    " + (f"on (scale {pag_scale:.1f})" if stage.pag else "off"))
         typer.echo("Generating (first run downloads weights)...")
     result = stage.run(
         prompt=final_prompt,
@@ -200,7 +196,6 @@ def image(
             "path": str(result.get("path")) if result.get("path") else None,
             "model": result.get("model"),
             "provider": result.get("provider", "local"),
-            "pag": result.get("pag", stage.pag),
             "seed": seed,
             **{k: v for k, v in gen.items() if k in ("num_inference_steps", "guidance_scale", "width", "height")},
         }, indent=2))
@@ -283,27 +278,15 @@ def hardware_plan(stage) -> str:
         return "n/a"
 
 
-def _best_of(stage, *, n, judge, prompt, negative_prompt, identity, identity_scale, seed, out, gen, as_json):
-    """Generate n candidates, then let the agent pick the cleanest (default) — the agent-as-judge loop.
+def _best_of(stage, *, n, prompt, negative_prompt, identity, identity_scale, seed, out, gen, as_json):
+    """Generate n candidates for the agent to view and pick the cleanest (agent-judged).
 
-    'reward'/'both' (an automated reward-model scorer) is an opt-in follow-up; until it's wired we
-    fall back to agent judging, which is the recommended default anyway.
+    The agent (Claude) is a frontier VLM judge: it reasons about anatomy, composition and appeal in a
+    way a fixed reward model can't, and needs no extra model or download.
     """
-    if judge not in ("agent", "reward", "both"):
-        typer.secho(f"Unknown --judge '{judge}' (use: agent, reward, both).", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
-    if judge in ("reward", "both") and not as_json:
-        typer.secho(
-            "note: --judge reward/both (the opt-in reward scorer / 'quality' extra) isn't wired yet; "
-            "using agent judging — review the candidates below and keep the cleanest.",
-            fg=typer.colors.YELLOW, err=True,
-        )
-
     if not as_json:
         typer.echo(f"Model:  {stage.model_key} ({stage.spec.repo_id})")
-        typer.echo("PAG:    " + (f"on (scale {stage.pag_scale:.1f})" if stage.pag else "off"))
         typer.echo(f"Best-of {n}: generating candidates for the agent to judge...")
-
     cands = []
     for i in range(n):
         s = (seed + i) if seed is not None else None
@@ -316,9 +299,8 @@ def _best_of(stage, *, n, judge, prompt, negative_prompt, identity, identity_sca
         cands.append({"path": str(cpath), "seed": s})
         if not as_json:
             typer.echo(f"  [{i + 1}/{n}] {cpath}")
-
     if as_json:
-        typer.echo(json.dumps({"candidates": cands, "judge": "agent", "best_of": n, "chosen": None}, indent=2))
+        typer.echo(json.dumps({"candidates": cands, "best_of": n}, indent=2))
     else:
         typer.echo(f"\n{n} candidates ready - review them and copy the cleanest to your output path.")
 

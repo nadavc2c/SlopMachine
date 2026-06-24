@@ -33,15 +33,15 @@ def test_comfortable_fit_no_offload(monkeypatch):
     monkeypatch.setattr(hardware, "_torch", lambda: _fake_torch(16))
     plan = hardware.plan_for(_spec(8))
     assert plan.offload == "none"
-    assert plan.fp8_layerwise is False
     assert plan.device == "cuda"
+    assert plan.vae_tiling is True
 
 
-def test_tight_fit_uses_offload_and_fp8(monkeypatch):
+def test_tight_fit_uses_offload(monkeypatch):
     monkeypatch.setattr(hardware, "_torch", lambda: _fake_torch(16))
     plan = hardware.plan_for(_spec(16))
     assert plan.offload == "model"
-    assert plan.fp8_layerwise is True
+    assert plan.vae_tiling is True
 
 
 def test_very_tight_fit_sequential(monkeypatch):

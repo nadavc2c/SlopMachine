@@ -109,8 +109,9 @@ uv run --extra dance slop dance --reference me.jpg --driving dance.mp4 -o output
   verified ~12.5 GB on the RTX 5080. Companion Agent Skill: `.claude/skills/slop/`.
 - **Portable backends + install-anywhere (done):** local CUDA/MPS/CPU + opt-in token-gated remote
   providers (cloud OFF by default); `config/` shipped as package data via `importlib.resources`.
-- **Anti-"slop" image quality (in progress):** PAG + anti-anatomy negatives (the defaults) → opt-in
-  best-of-N with an agent/reward judge → ADetailer-style hand/face inpaint → ControlNet conditioning.
+- **Bleeding-edge models + agent-judged quality (in progress):** keep the registry on the current best
+  open models (which solve anatomy/hands natively) + `--best-of N` for the agent to pick the cleanest.
+  A periodic-update discipline keeps every model/dep/standard fresh (see `docs/PERIODIC-UPDATE.md`).
 - **Character consistency + recipe workflows (sticker packs):** a saved **character** (reference image +
   locked style/seed via IP-Adapter → optional per-character LoRA) run through a library of **recipes**
   (poses / costumes / actions) to emit uniform sticker-style packs — workflows as human-readable data
