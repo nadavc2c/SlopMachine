@@ -6,8 +6,6 @@ subclasses; pipelines are just stages chained by the runner. Adding an SVG-traci
 step later means dropping in a TraceStage — no changes to existing stages.
 """
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -22,4 +20,4 @@ class Stage(ABC):
         Outputs from one stage become inputs to the next when chained by the runner,
         so keep output keys descriptive (e.g. ``image``, ``video``, ``pose``).
         """
-        raise NotImplementedError
+        ...

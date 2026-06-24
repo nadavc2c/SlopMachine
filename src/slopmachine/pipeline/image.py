@@ -8,11 +8,9 @@ works across SDXL (takes negative_prompt) and FLUX (does not), etc.
 torch/diffusers are imported lazily so importing this module stays cheap.
 """
 
-from __future__ import annotations
-
 import inspect
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .. import config, hardware
 from ..registry import get_model
@@ -30,7 +28,7 @@ def _accepted_kwargs(pipe, kwargs: dict[str, Any]) -> dict[str, Any]:
 class ImageStage(Stage):
     name = "image"
 
-    def __init__(self, model_key: Optional[str] = None, provider: Optional[str] = None):
+    def __init__(self, model_key: str | None = None, provider: str | None = None):
         self.model_key, self.spec = get_model("image", model_key)
         # Resolve + GATE the provider up front: raises SlopError if a paid cloud backend is selected
         # without the SLOP_ALLOW_CLOUD opt-in (and a token). Default is the free local backend.
@@ -74,7 +72,7 @@ class ImageStage(Stage):
         self._pipe, self._plan = pipe, plan
         return pipe
 
-    def load_identity(self, adapter_key: Optional[str] = None):
+    def load_identity(self, adapter_key: str | None = None):
         """Load an identity adapter (e.g. IP-Adapter) onto the pipeline."""
         pipe = self.load()
         if not hasattr(pipe, "load_ip_adapter"):
@@ -95,10 +93,10 @@ class ImageStage(Stage):
         self,
         prompt: str,
         negative_prompt: str = "",
-        identity_image: Optional[str] = None,
+        identity_image: str | None = None,
         identity_scale: float = 0.7,
-        seed: Optional[int] = None,
-        out: Optional[Path] = None,
+        seed: int | None = None,
+        out: Path | None = None,
         **gen_kwargs: Any,
     ) -> dict[str, Any]:
         out_path = Path(out) if out else None

@@ -13,10 +13,8 @@ job (the diffusers pipeline expects already-preprocessed inputs).
 torch/diffusers are imported lazily so importing this module stays cheap.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .. import hardware
 from ..registry import get_model
@@ -27,7 +25,7 @@ from .image import _accepted_kwargs  # same model-agnostic kwarg filtering as th
 class AnimateStage(Stage):
     name = "animation"
 
-    def __init__(self, model_key: Optional[str] = None):
+    def __init__(self, model_key: str | None = None):
         self.model_key, self.spec = get_model("animation", model_key)
         self._pipe = None
         self._plan = None
@@ -115,9 +113,9 @@ class AnimateStage(Stage):
         face_video: Any,
         prompt: str = "",
         negative_prompt: str = "",
-        fps: Optional[int] = None,
-        seed: Optional[int] = None,
-        out: Optional[Path] = None,
+        fps: int | None = None,
+        seed: int | None = None,
+        out: Path | None = None,
         **gen_kwargs: Any,
     ) -> dict[str, Any]:
         """Render the animation.

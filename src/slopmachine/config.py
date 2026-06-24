@@ -5,11 +5,8 @@ which model backs each capability. Code never hardcodes model ids — it asks th
 registry. Style presets live in ``src/slopmachine/config/styles/*.yaml``.
 """
 
-from __future__ import annotations
-
 import os
 from pathlib import Path
-from typing import Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -75,7 +72,7 @@ def cloud_allowed() -> bool:
     return os.environ.get("SLOP_ALLOW_CLOUD", "").strip().lower() in ("1", "true", "yes", "on")
 
 
-def provider_token(provider: str) -> Optional[str]:
+def provider_token(provider: str) -> str | None:
     """Return the first set token env value for a remote provider, or None."""
     for env in _PROVIDER_TOKENS.get(provider, ()):
         value = os.environ.get(env)
@@ -84,7 +81,7 @@ def provider_token(provider: str) -> Optional[str]:
     return None
 
 
-def resolve_provider(spec, cli_provider: Optional[str] = None) -> str:
+def resolve_provider(spec, cli_provider: str | None = None) -> str:
     """Pick the provider (cli > SLOP_PROVIDER > spec.provider > 'local') and ENFORCE the cloud gate.
 
     Single choke point: a remote/paid provider is refused unless SLOP_ALLOW_CLOUD is set AND a token
@@ -114,15 +111,15 @@ class ModelSpec(BaseModel):
 
     repo_id: str
     precision: str = "bf16"          # bf16 | fp16 | fp32
-    variant: Optional[str] = None     # e.g. "fp16" weight variant in the repo
+    variant: str | None = None     # e.g. "fp16" weight variant in the repo
     min_vram_gb: float = 8.0          # rough footprint; drives the load plan
     license: str = "unknown"
-    tier: Optional[str] = None        # informational: "fast" | "quality" | ...
+    tier: str | None = None        # informational: "fast" | "quality" | ...
     provider: str = "local"           # "local" (diffusers) | "hf-inference" | "google-genai"
-    pipeline: Optional[str] = None    # explicit diffusers pipeline class; else AutoPipeline
-    subfolder: Optional[str] = None   # for adapters
-    weight_name: Optional[str] = None # for adapters
-    base_capability: Optional[str] = None  # adapter applies on top of this capability
+    pipeline: str | None = None    # explicit diffusers pipeline class; else AutoPipeline
+    subfolder: str | None = None   # for adapters
+    weight_name: str | None = None # for adapters
+    base_capability: str | None = None  # adapter applies on top of this capability
     gen_defaults: dict = Field(default_factory=dict)
     notes: str = ""
 
@@ -133,7 +130,7 @@ class Capability(BaseModel):
     default: str
     models: dict[str, ModelSpec]
 
-    def resolve(self, key: Optional[str] = None) -> tuple[str, ModelSpec]:
+    def resolve(self, key: str | None = None) -> tuple[str, ModelSpec]:
         chosen = key or self.default
         if chosen not in self.models:
             raise SlopError(
@@ -164,7 +161,7 @@ class StylePreset(BaseModel):
         return self.positive.format(prompt=prompt), self.negative
 
 
-def load_registry(path: Optional[Path] = None) -> Registry:
+def load_registry(path: Path | None = None) -> Registry:
     path = path or (config_dir() / "models.yaml")
     data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     return Registry(**data)

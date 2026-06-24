@@ -8,10 +8,7 @@ Quantization libraries are intentionally avoided unless a specific model proves 
 torch is imported lazily so the CLI (e.g. ``slop models list``) starts without it.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import Optional
 
 
 def _torch():
@@ -64,7 +61,7 @@ def gpu_name() -> str:
     return "cpu"
 
 
-def capability() -> Optional[tuple[int, int]]:
+def capability() -> tuple[int, int] | None:
     t = _torch()
     return t.cuda.get_device_capability(0) if t.cuda.is_available() else None
 

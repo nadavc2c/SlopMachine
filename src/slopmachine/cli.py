@@ -5,13 +5,10 @@ to a Stage, and print where the output landed. Heavy imports (torch/diffusers) a
 deferred into the command bodies so `slop models list` / `--help` stay instant.
 """
 
-from __future__ import annotations
-
 import json
 import os
 import re
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -133,19 +130,19 @@ def capabilities(as_json: bool = typer.Option(False, "--json", help="Machine-rea
 @app.command()
 def image(
     prompt: str = typer.Argument(..., help="Text prompt."),
-    style: Optional[str] = typer.Option(None, "--style", "-s", help="Style preset (see `slop styles`)."),
-    model: Optional[str] = typer.Option(None, "--model", "-m", help="Registry model key (default: registry default)."),
-    provider: Optional[str] = typer.Option(None, "--provider", help="Backend: local | hf-inference | google-genai. Cloud is OFF by default — needs SLOP_ALLOW_CLOUD=1 + a token; default is local (free)."),
-    identity: Optional[Path] = typer.Option(None, "--identity", "-i", exists=True, dir_okay=False, help="Reference face image for identity preservation."),
+    style: str | None = typer.Option(None, "--style", "-s", help="Style preset (see `slop styles`)."),
+    model: str | None = typer.Option(None, "--model", "-m", help="Registry model key (default: registry default)."),
+    provider: str | None = typer.Option(None, "--provider", help="Backend: local | hf-inference | google-genai. Cloud is OFF by default — needs SLOP_ALLOW_CLOUD=1 + a token; default is local (free)."),
+    identity: Path | None = typer.Option(None, "--identity", "-i", exists=True, dir_okay=False, help="Reference face image for identity preservation."),
     identity_scale: float = typer.Option(0.6, help="Identity strength 0-1. Higher = closer to the reference but weaker prompt/scene; lower it if the scene isn't showing."),
-    steps: Optional[int] = typer.Option(None, "--steps", help="Inference steps."),
-    guidance: Optional[float] = typer.Option(None, "--guidance", "-g", help="Guidance scale."),
-    width: Optional[int] = typer.Option(None, "--width"),
-    height: Optional[int] = typer.Option(None, "--height"),
-    negative: Optional[str] = typer.Option(None, "--negative", help="Negative-prompt terms (used by models that support it; guidance-distilled models like FLUX/Qwen ignore it)."),
+    steps: int | None = typer.Option(None, "--steps", help="Inference steps."),
+    guidance: float | None = typer.Option(None, "--guidance", "-g", help="Guidance scale."),
+    width: int | None = typer.Option(None, "--width"),
+    height: int | None = typer.Option(None, "--height"),
+    negative: str | None = typer.Option(None, "--negative", help="Negative-prompt terms (used by models that support it; guidance-distilled models like FLUX/Qwen ignore it)."),
     best_of: int = typer.Option(1, "--best-of", help="Generate N candidates for the agent to view and pick the best (agent-judged)."),
-    seed: Optional[int] = typer.Option(None, "--seed", help="Seed for reproducibility."),
-    out: Optional[Path] = typer.Option(None, "--out", "-o", help="Output PNG path."),
+    seed: int | None = typer.Option(None, "--seed", help="Seed for reproducibility."),
+    out: Path | None = typer.Option(None, "--out", "-o", help="Output PNG path."),
     as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON result (suppresses progress)."),
 ):
     """Generate an image from a text prompt."""
@@ -208,11 +205,11 @@ def dance(
     reference: Path = typer.Option(..., "--reference", "-r", exists=True, dir_okay=False, help="Reference person image."),
     driving: Path = typer.Option(..., "--driving", "-d", exists=True, dir_okay=False, help="Driving dance video (the motion to transfer)."),
     prompt: str = typer.Option("", "--prompt", "-p", help="Optional scene/style prompt."),
-    model: Optional[str] = typer.Option(None, "--model", "-m", help="Animation model key (default: registry default)."),
-    steps: Optional[int] = typer.Option(None, "--steps", help="Inference steps (fewer = faster)."),
-    seed: Optional[int] = typer.Option(None, "--seed", help="Seed for reproducibility."),
-    fps: Optional[int] = typer.Option(None, "--fps", help="Target FPS (default: driving video / preset)."),
-    out: Optional[Path] = typer.Option(None, "--out", "-o", help="Output MP4 path."),
+    model: str | None = typer.Option(None, "--model", "-m", help="Animation model key (default: registry default)."),
+    steps: int | None = typer.Option(None, "--steps", help="Inference steps (fewer = faster)."),
+    seed: int | None = typer.Option(None, "--seed", help="Seed for reproducibility."),
+    fps: int | None = typer.Option(None, "--fps", help="Target FPS (default: driving video / preset)."),
+    out: Path | None = typer.Option(None, "--out", "-o", help="Output MP4 path."),
     as_json: bool = typer.Option(False, "--json", help="Machine-readable JSON result (suppresses progress)."),
 ):
     """AI dance: animate a person from a reference photo with a driving dance video.
@@ -334,7 +331,7 @@ def models_list(as_json: bool = typer.Option(False, "--json", help="Machine-read
 @models_app.command("show")
 def models_show(
     capability: str = typer.Argument(..., help="Capability name, e.g. image."),
-    model: Optional[str] = typer.Option(None, "--model", "-m"),
+    model: str | None = typer.Option(None, "--model", "-m"),
 ):
     """Show full spec for a model."""
     from .registry import get_model
@@ -349,7 +346,7 @@ def models_show(
 @models_app.command("download")
 def models_download(
     capability: str = typer.Argument(..., help="Capability name, e.g. image."),
-    model: Optional[str] = typer.Option(None, "--model", "-m"),
+    model: str | None = typer.Option(None, "--model", "-m"),
 ):
     """Pre-fetch a model's weights into the repo-local cache."""
     from huggingface_hub import snapshot_download
@@ -388,7 +385,7 @@ def assets_list(as_json: bool = typer.Option(False, "--json", help="Machine-read
 @assets_app.command("download")
 def assets_download(
     kind: str = typer.Argument(..., help="Asset kind: 'pose' or 'dance'."),
-    name: Optional[str] = typer.Argument(None, help="For 'dance': the clip id (see `slop assets list`)."),
+    name: str | None = typer.Argument(None, help="For 'dance': the clip id (see `slop assets list`)."),
 ):
     """Pre-fetch supporting assets into the local cache."""
     if kind == "pose":

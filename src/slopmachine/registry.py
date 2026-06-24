@@ -4,13 +4,10 @@ Capability -> resolved ModelSpec. This is the only place the rest of the code
 goes to find out *which* model to use, so swapping models never touches code.
 """
 
-from __future__ import annotations
-
-from typing import Optional
 
 from .config import ModelSpec, Registry, load_registry
 
-_cache: Optional[Registry] = None
+_cache: Registry | None = None
 
 
 def registry(reload: bool = False) -> Registry:
@@ -20,7 +17,7 @@ def registry(reload: bool = False) -> Registry:
     return _cache
 
 
-def get_model(capability: str, key: Optional[str] = None) -> tuple[str, ModelSpec]:
+def get_model(capability: str, key: str | None = None) -> tuple[str, ModelSpec]:
     """Resolve (model_key, spec) for a capability; key=None uses the default."""
     return registry().capability(capability).resolve(key)
 

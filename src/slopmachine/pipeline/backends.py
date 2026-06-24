@@ -6,8 +6,6 @@ opt-in gate (``SLOP_ALLOW_CLOUD``) and confirmed a token — so no call here can
 unexpectedly. Each backend returns a ``PIL.Image``. Heavy/optional SDK imports are deferred.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from .. import config

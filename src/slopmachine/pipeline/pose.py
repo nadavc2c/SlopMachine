@@ -12,11 +12,9 @@ pose extraction on a short clip is light. The heavy diffusion runs separately on
 Heavy imports are deferred into methods so importing this module stays cheap.
 """
 
-from __future__ import annotations
-
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .. import config
 from ..registry import get_model
@@ -43,10 +41,10 @@ def ensure_pose_assets(spec) -> Path:
 class PoseStage(Stage):
     name = "pose"
 
-    def __init__(self, model_key: Optional[str] = None):
+    def __init__(self, model_key: str | None = None):
         self.model_key, self.spec = get_model("pose", model_key)
         self._pose2d = None
-        self._ckpt: Optional[Path] = None
+        self._ckpt: Path | None = None
 
     def load(self):
         if self._pose2d is not None:
@@ -99,7 +97,7 @@ class PoseStage(Stage):
         self,
         driving_video: Any,
         reference_image: Any,
-        out_dir: Optional[Path] = None,
+        out_dir: Path | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         import cv2
