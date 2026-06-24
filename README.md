@@ -1,6 +1,15 @@
+<div align="center">
+
+<img src="docs/slop-mascot.png" alt="SlopMachine mascot — a casino fox-girl" width="300" />
+
 # SlopMachine
 
 **`slop` — the Swiss-army-knife of generative content, built from the ground up to be driven by AI agents.**
+
+<sub>↑ the mascot was generated <b>by slop itself</b>, on the local RTX 5080:<br/>
+<code>uv run slop image "...a charming fox-girl mascot..." --style casino --seed 7</code></sub>
+
+</div>
 
 A modular, CLI-driven toolkit for running the best open generative-AI models **locally** — NVIDIA
 first-class (built/tested on an RTX 5080, 16 GB), but also Apple-MPS / CPU, or with **no GPU at all**
