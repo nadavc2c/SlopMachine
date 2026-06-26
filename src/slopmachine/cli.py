@@ -140,7 +140,9 @@ def image(
     guidance: Annotated[float | None, typer.Option("--guidance", "-g", help="Guidance scale.")] = None,
     width: Annotated[int | None, typer.Option("--width")] = None,
     height: Annotated[int | None, typer.Option("--height")] = None,
-    negative: Annotated[str | None, typer.Option("--negative", help="Negative-prompt terms (used by models that support it; guidance-distilled models like FLUX/Qwen ignore it).")] = None,
+    aspect: Annotated[str | None, typer.Option("--aspect", help="Aspect ratio (google-genai only): 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, 4:5, 5:4, 21:9, 1:4, 4:1, 1:8, 8:1.")] = None,
+    size: Annotated[str | None, typer.Option("--size", help="Output size (google-genai only): 512, 1K, 2K, 4K.")] = None,
+    negative: Annotated[str | None, typer.Option("--negative", help="Negative-prompt terms (used by models that support it; guidance-distilled models like FLUX/Qwen and Gemini ignore it).")] = None,
     best_of: Annotated[int, typer.Option("--best-of", help="Generate N candidates for the agent to view and pick the best (agent-judged).")] = 1,
     seed: Annotated[int | None, typer.Option("--seed", help="Seed for reproducibility.")] = None,
     out: Annotated[Path | None, typer.Option("--out", "-o", help="Output PNG path.")] = None,
@@ -163,8 +165,21 @@ def image(
 
     stage = _safe(ImageStage, model_key=model, provider=provider)
 
+    # Gemini (google-genai) has no seed / negative-prompt control — say so instead of silently dropping them.
+    if stage.provider == "google-genai":
+        ignored = [n for n, v in (("--seed", seed), ("negative prompt", negative_prompt)) if v]
+        if ignored:
+            typer.secho(
+                f"Note: {stage.spec.repo_id} (Gemini) ignores {', '.join(ignored)} - it exposes no seed/negative "
+                "control. Use --aspect / --size to steer output.",
+                fg=typer.colors.YELLOW, err=True,
+            )
+
     gen = dict(style_defaults)
-    for key, value in {"num_inference_steps": steps, "guidance_scale": guidance, "width": width, "height": height}.items():
+    for key, value in {
+        "num_inference_steps": steps, "guidance_scale": guidance, "width": width, "height": height,
+        "aspect_ratio": aspect, "image_size": size,
+    }.items():
         if value is not None:
             gen[key] = value
 
@@ -195,7 +210,7 @@ def image(
             "model": result.get("model"),
             "provider": result.get("provider", "local"),
             "seed": seed,
-            **{k: v for k, v in gen.items() if k in ("num_inference_steps", "guidance_scale", "width", "height")},
+            **{k: v for k, v in gen.items() if k in ("num_inference_steps", "guidance_scale", "width", "height", "aspect_ratio", "image_size")},
         }, indent=2))
     else:
         typer.echo(f"Saved:  {result['path']}")

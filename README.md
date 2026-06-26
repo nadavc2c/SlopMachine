@@ -72,17 +72,37 @@ device: **CUDA → Apple-MPS → CPU** (heavy dance/video want a real GPU; small
 
 For GPU-less use, opt into **token-based remote providers** — HuggingFace Inference or Google
 (`google-genai`, current Gemini image model, *not* the deprecated Imagen). They are **OFF by default**
-and cannot spend money unless you explicitly opt in:
+and cannot spend money unless you explicitly opt in.
+
+**1. Create the token** for whichever provider you'll use:
+
+| Provider (`--provider` / `-m`) | Create the token at | What it must be |
+| --- | --- | --- |
+| HuggingFace · `hf-inference` (`-m hf-flux`) | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) | a **fine-grained** token with the **"Make calls to Inference Providers"** permission — or simply run `uvx hf auth login` |
+| Google · `google-genai` (`-m google` / `-m google-pro`) | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | a Gemini API key whose project has the **Generative Language API** enabled and allowed on the key |
+
+**2. Put it where `slop` reads it.** Tokens come from the environment — copy the template to a
+**git-ignored `.env`** (never commit it) and fill in what you need:
 
 ```bash
-export SLOP_ALLOW_CLOUD=1            # a standing, human-set allowance (PowerShell: $env:SLOP_ALLOW_CLOUD="1")
-export HF_TOKEN=hf_...               # or GEMINI_API_KEY for Google
-uv run slop image "a neon cat" --provider hf-inference -m hf-flux -o outputs/cat.png
+cp .env.example .env                 # .env is git-ignored; holds GEMINI_API_KEY / HF_TOKEN
 ```
+
+`uv` loads `.env` natively — pass `--env-file .env` (or set `UV_ENV_FILE=.env` once in your shell
+profile so a plain `uv run` picks it up). The `cloud` extra adds Google's SDK:
+
+```bash
+export SLOP_ALLOW_CLOUD=1            # standing, human-set spend allowance (PowerShell: $env:SLOP_ALLOW_CLOUD="1")
+uv run --env-file .env slop image "a neon cat" -m hf-flux -o outputs/cat.png
+uv run --env-file .env --extra cloud slop image "a neon cat" -m google --aspect 16:9 --size 2K -o outputs/cat.png
+```
+
+`-m google` is Nano Banana 2 (fast default); `-m google-pro` is Nano Banana Pro (top quality, 4K).
+Gemini steers via `--aspect` / `--size` (it has no `--seed` / `--negative`).
 
 Without the gate (or a token) any remote provider is **refused** with a clear message — one choke point
 (`config.resolve_provider`) guarantees no path spends by accident. `slop info` shows the gate state and
-which tokens are present; the `cloud` extra adds Google's SDK (`uv sync --extra cloud`).
+which tokens are present.
 
 ## Use it as an Agent Skill / Claude plugin
 

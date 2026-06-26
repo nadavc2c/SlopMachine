@@ -9,6 +9,12 @@ wheels/
 # Virtual environments
 .venv
 
+# Secrets — provider tokens live in env / an untracked .env (never committed).
+# uv loads .env into `uv run` via --env-file/UV_ENV_FILE. The .env.example template IS tracked.
+.env
+.env.*
+!.env.example
+
 # Generated artifacts
 outputs/
 

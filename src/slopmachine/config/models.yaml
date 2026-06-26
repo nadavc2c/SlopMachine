@@ -83,6 +83,11 @@ capabilities:
         notes: >-
           Remote via HuggingFace Inference Providers (InferenceClient.text_to_image). Needs HF_TOKEN
           (or HUGGING_FACE_HUB_TOKEN) + SLOP_ALLOW_CLOUD=1. Pick: `slop image --provider hf-inference -m hf-flux`.
+      # PERIODIC-UPDATE-RESEARCH: image-google | last-verified=2026-06-26 | latest-stable=gemini-3.1-flash-image
+      #   source=https://ai.google.dev/gemini-api/docs/models  (both Gemini 3 image models marked "Stable", not preview)
+      #   verified: live call via google-genai 2.10.0 Interactions API (client.interactions.create) produced an image.
+      #   notes: gemini-3.1-flash-image = "Nano Banana 2" (Google's recommended default route, ~95% of Pro at lower
+      #          cost/latency). Granular control via response_format (aspect_ratio, image_size). NO seed/negative.
       google:
         repo_id: gemini-3.1-flash-image
         provider: google-genai
@@ -90,9 +95,23 @@ capabilities:
         license: Google Gemini API terms (paid)
         tier: remote
         notes: >-
-          Remote via Google Gen AI SDK — current Gemini image model ("Nano Banana"), NOT the deprecated
-          Imagen. Needs GEMINI_API_KEY (or GOOGLE_API_KEY) + SLOP_ALLOW_CLOUD=1 + the `cloud` extra
-          (`uv sync --extra cloud`). Model id refreshed via /slop-models.
+          Remote via Google Gen AI SDK — "Nano Banana 2" (Gemini 3.1 Flash Image), Google's default image
+          route. NOT the deprecated Imagen. Needs GEMINI_API_KEY (or GOOGLE_API_KEY) + SLOP_ALLOW_CLOUD=1
+          + the `cloud` extra (`uv sync --extra cloud`). Supports --aspect / --size; ignores --seed/--negative.
+      # PERIODIC-UPDATE-RESEARCH: image-google-pro | last-verified=2026-06-26 | latest-stable=gemini-3-pro-image
+      #   source=https://ai.google.dev/gemini-api/docs/models + https://deepmind.google/models/gemini-image/pro/
+      #   notes: "Nano Banana Pro" (Gemini 3 Pro Image), the highest-quality tier — best for in-image text, layout,
+      #          diagrams, 4K, brand-critical work. Marked Stable/GA. Pricier than Flash; no free tier.
+      google-pro:
+        repo_id: gemini-3-pro-image
+        provider: google-genai
+        min_vram_gb: 0
+        license: Google Gemini API terms (paid)
+        tier: remote
+        notes: >-
+          Max-quality remote tier — "Nano Banana Pro" (Gemini 3 Pro Image). Same wiring as `google`
+          (GEMINI_API_KEY + SLOP_ALLOW_CLOUD=1 + `cloud` extra). Use for text-heavy / layout / 4K / brand work:
+          `slop image "..." -m google-pro --size 4K`. Pricier; no free tier.
 
   identity:
     default: ip-adapter-sdxl
